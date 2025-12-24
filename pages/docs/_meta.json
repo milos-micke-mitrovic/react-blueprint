@@ -1,0 +1,17 @@
+{
+  "getting-started": "Getting Started",
+  "naming": "Naming Conventions",
+  "components": "Components",
+  "state": "State Management",
+  "data-fetching": "Data Fetching",
+  "styling": "Styling",
+  "typescript": "TypeScript",
+  "testing": "Testing",
+  "errors": "Error Handling",
+  "performance": "Performance",
+  "linting": "Linting",
+  "git": "Git Workflow",
+  "documentation": "Documentation",
+  "security": "Security",
+  "accessibility": "Accessibility"
+}

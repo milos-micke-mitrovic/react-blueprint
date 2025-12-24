@@ -1,0 +1,228 @@
+# Zustand
+
+Lightweight state management for global client state.
+
+## Store Pattern
+
+```typescript
+// stores/authStore.ts
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+}
+
+interface AuthActions {
+  login: (user: User, token: string) => void;
+  logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
+}
+
+export const useAuthStore = create<AuthState & AuthActions>()(
+  devtools(
+    persist(
+      immer((set) => ({
+        // State
+        user: null,
+        token: null,
+        isAuthenticated: false,
+
+        // Actions
+        login: (user, token) =>
+          set((state) => {
+            state.user = user;
+            state.token = token;
+            state.isAuthenticated = true;
+          }),
+
+        logout: () =>
+          set((state) => {
+            state.user = null;
+            state.token = null;
+            state.isAuthenticated = false;
+          }),
+
+        updateUser: (updates) =>
+          set((state) => {
+            if (state.user) {
+              Object.assign(state.user, updates);
+            }
+          }),
+      })),
+      { name: 'auth-storage' }
+    ),
+    { name: 'AuthStore' }
+  )
+);
+```
+
+## Selector Hooks
+
+Always create selector hooks to prevent unnecessary re-renders:
+
+```typescript
+// Selector hooks
+export const useUser = () => useAuthStore((s) => s.user);
+export const useIsAuthenticated = () => useAuthStore((s) => s.isAuthenticated);
+export const useAuthActions = () => useAuthStore((s) => ({
+  login: s.login,
+  logout: s.logout,
+  updateUser: s.updateUser,
+}));
+```
+
+## Usage in Components
+
+```typescript
+const UserMenu = () => {
+  const user = useUser();
+  const { logout } = useAuthActions();
+
+  if (!user) return null;
+
+  return (
+    <Menu>
+      <Menu.Button>{user.name}</Menu.Button>
+      <Menu.Items>
+        <Menu.Item onClick={logout}>Logout</Menu.Item>
+      </Menu.Items>
+    </Menu>
+  );
+};
+```
+
+## Store Rules
+
+### 1. One Store Per Domain
+
+```typescript
+// ✅ Separate stores
+useAuthStore    // Authentication
+useUIStore      // UI state (modals, sidebar)
+useSettingsStore // User preferences
+
+// ❌ Don't combine unrelated state
+useMegaStore    // Everything in one place
+```
+
+### 2. Always Use Selectors
+
+```typescript
+// ❌ Bad - subscribes to entire store
+const { user, token, isAuthenticated } = useAuthStore();
+
+// ✅ Good - subscribes only to user
+const user = useAuthStore((s) => s.user);
+```
+
+### 3. Keep Stores Flat
+
+```typescript
+// ❌ Deeply nested
+interface State {
+  data: {
+    users: {
+      list: User[];
+      selected: {
+        id: string;
+        details: UserDetails;
+      };
+    };
+  };
+}
+
+// ✅ Flat structure
+interface State {
+  users: User[];
+  selectedUserId: string | null;
+  userDetails: Record<string, UserDetails>;
+}
+```
+
+### 4. Use Immer for Complex Updates
+
+```typescript
+// Without Immer
+updateUser: (updates) => set((state) => ({
+  user: state.user ? { ...state.user, ...updates } : null,
+}))
+
+// With Immer
+updateUser: (updates) => set((state) => {
+  if (state.user) {
+    Object.assign(state.user, updates);
+  }
+})
+```
+
+### 5. Persist Only Necessary Data
+
+```typescript
+persist(
+  (set) => ({ /* ... */ }),
+  {
+    name: 'auth-storage',
+    // Only persist essential data
+    partialize: (state) => ({
+      token: state.token,
+      user: state.user,
+    }),
+  }
+)
+```
+
+## UI Store Example
+
+```typescript
+interface UIState {
+  isSidebarOpen: boolean;
+  activeModal: string | null;
+  toasts: Toast[];
+}
+
+interface UIActions {
+  toggleSidebar: () => void;
+  openModal: (id: string) => void;
+  closeModal: () => void;
+  addToast: (toast: Toast) => void;
+  removeToast: (id: string) => void;
+}
+
+export const useUIStore = create<UIState & UIActions>()(
+  devtools(
+    (set) => ({
+      isSidebarOpen: true,
+      activeModal: null,
+      toasts: [],
+
+      toggleSidebar: () =>
+        set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
+
+      openModal: (id) =>
+        set({ activeModal: id }),
+
+      closeModal: () =>
+        set({ activeModal: null }),
+
+      addToast: (toast) =>
+        set((s) => ({ toasts: [...s.toasts, toast] })),
+
+      removeToast: (id) =>
+        set((s) => ({
+          toasts: s.toasts.filter((t) => t.id !== id),
+        })),
+    }),
+    { name: 'UIStore' }
+  )
+);
+```

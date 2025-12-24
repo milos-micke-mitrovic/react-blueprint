@@ -1,0 +1,144 @@
+# Prettier Configuration
+
+Consistent code formatting with Prettier.
+
+## Configuration
+
+```json
+// .prettierrc
+{
+  "semi": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "useTabs": false,
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "plugins": ["prettier-plugin-tailwindcss"]
+}
+```
+
+## Tailwind Plugin
+
+Automatically sorts Tailwind classes:
+
+```bash
+pnpm add -D prettier-plugin-tailwindcss
+```
+
+Before:
+```tsx
+<div className="p-4 flex text-white bg-blue-500 items-center">
+```
+
+After:
+```tsx
+<div className="flex items-center bg-blue-500 p-4 text-white">
+```
+
+## Ignore Patterns
+
+```
+// .prettierignore
+node_modules/
+dist/
+build/
+coverage/
+pnpm-lock.yaml
+*.md
+```
+
+## Scripts
+
+```json
+{
+  "scripts": {
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
+  }
+}
+```
+
+## VSCode Integration
+
+```json
+// .vscode/settings.json
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}
+```
+
+## ESLint Integration
+
+Disable ESLint rules that conflict with Prettier:
+
+```bash
+pnpm add -D eslint-config-prettier
+```
+
+```javascript
+// eslint.config.js
+import prettier from 'eslint-config-prettier';
+
+export default [
+  // ... other configs
+  prettier, // Must be last
+];
+```
+
+## Pre-commit with Husky
+
+```bash
+pnpm add -D husky lint-staged
+npx husky init
+```
+
+```json
+// package.json
+{
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
+  }
+}
+```
+
+```bash
+# .husky/pre-commit
+npx lint-staged
+```
+
+## Editor Config
+
+For consistent settings across editors:
+
+```ini
+# .editorconfig
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+```

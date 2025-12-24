@@ -1,0 +1,228 @@
+# API Error Handling
+
+Patterns for handling API errors consistently.
+
+## Custom Error Class
+
+```typescript
+// lib/errors/AppError.ts
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public statusCode: number = 500,
+    public details?: Record<string, string[]>
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+
+  static isAppError(error: unknown): error is AppError {
+    return error instanceof AppError;
+  }
+
+  static fromResponse(response: ApiErrorResponse): AppError {
+    return new AppError(
+      response.message,
+      response.code,
+      response.statusCode,
+      response.details
+    );
+  }
+}
+```
+
+## Error Messages Map
+
+```typescript
+// constants/errorMessages.ts
+export const ERROR_MESSAGES: Record<string, string> = {
+  UNAUTHORIZED: 'Please log in to continue',
+  FORBIDDEN: 'You do not have permission to perform this action',
+  NOT_FOUND: 'The requested resource was not found',
+  VALIDATION_ERROR: 'Please check your input and try again',
+  NETWORK_ERROR: 'Unable to connect. Please check your internet connection',
+  RATE_LIMIT: 'Too many requests. Please wait a moment',
+  SERVER_ERROR: 'Something went wrong on our end. Please try again',
+  DEFAULT: 'An unexpected error occurred',
+};
+```
+
+## Error Handler Hook
+
+```typescript
+// hooks/useApiError.ts
+import { toast } from 'sonner';
+import { AppError } from '@/lib/errors/AppError';
+import { ERROR_MESSAGES } from '@/constants/errorMessages';
+
+export const useApiError = () => {
+  const handleError = (error: unknown) => {
+    // Known application error
+    if (AppError.isAppError(error)) {
+      const message = ERROR_MESSAGES[error.code] ?? error.message;
+      toast.error(message);
+
+      // Handle specific error codes
+      if (error.code === 'UNAUTHORIZED') {
+        // Redirect to login
+      }
+
+      return;
+    }
+
+    // Axios error
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+
+      if (status === 401) {
+        toast.error(ERROR_MESSAGES.UNAUTHORIZED);
+        return;
+      }
+
+      if (status === 403) {
+        toast.error(ERROR_MESSAGES.FORBIDDEN);
+        return;
+      }
+
+      if (status === 404) {
+        toast.error(ERROR_MESSAGES.NOT_FOUND);
+        return;
+      }
+
+      if (status === 429) {
+        toast.error(ERROR_MESSAGES.RATE_LIMIT);
+        return;
+      }
+
+      if (!error.response) {
+        toast.error(ERROR_MESSAGES.NETWORK_ERROR);
+        return;
+      }
+    }
+
+    // Unknown error
+    console.error('Unhandled error:', error);
+    toast.error(ERROR_MESSAGES.DEFAULT);
+  };
+
+  return { handleError };
+};
+```
+
+## Usage with TanStack Query
+
+```typescript
+// Global error handler
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors
+        if (axios.isAxiosError(error) && error.response?.status < 500) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+    },
+    mutations: {
+      onError: (error) => {
+        // Handled by individual mutations
+      },
+    },
+  },
+});
+
+// In mutations
+const useCreateUser = () => {
+  const { handleError } = useApiError();
+
+  return useMutation({
+    mutationFn: userService.createUser,
+    onError: handleError,
+  });
+};
+```
+
+## Axios Interceptor Error Handling
+
+```typescript
+// services/api/apiClient.ts
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<ApiErrorResponse>) => {
+    // Transform to AppError
+    if (error.response?.data) {
+      return Promise.reject(
+        AppError.fromResponse(error.response.data)
+      );
+    }
+
+    // Network error
+    if (!error.response) {
+      return Promise.reject(
+        new AppError('Network error', 'NETWORK_ERROR', 0)
+      );
+    }
+
+    return Promise.reject(error);
+  }
+);
+```
+
+## Form Validation Errors
+
+```typescript
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
+const handleFormError = (
+  error: unknown,
+  setError: UseFormSetError<FormValues>
+) => {
+  if (AppError.isAppError(error) && error.details) {
+    // Set field-level errors
+    Object.entries(error.details).forEach(([field, messages]) => {
+      setError(field as keyof FormValues, {
+        type: 'server',
+        message: messages[0],
+      });
+    });
+    return;
+  }
+
+  // Show generic toast for other errors
+  toast.error(getErrorMessage(error));
+};
+```
+
+## Error Display Component
+
+```typescript
+interface ErrorMessageProps {
+  error: unknown;
+  onRetry?: () => void;
+}
+
+export const ErrorMessage = ({ error, onRetry }: ErrorMessageProps) => {
+  const message = AppError.isAppError(error)
+    ? ERROR_MESSAGES[error.code] ?? error.message
+    : ERROR_MESSAGES.DEFAULT;
+
+  return (
+    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+      <p className="text-red-800">{message}</p>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="mt-2 text-sm text-red-600 underline"
+        >
+          Try again
+        </button>
+      )}
+    </div>
+  );
+};
+```

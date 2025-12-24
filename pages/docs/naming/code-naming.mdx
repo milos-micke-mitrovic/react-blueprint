@@ -1,0 +1,130 @@
+# Code Naming Conventions
+
+Naming patterns for variables, functions, and types.
+
+## Correct Patterns
+
+```typescript
+// Components - PascalCase
+const UserProfileCard: React.FC<Props> = () => {};
+
+// Props - PascalCase with Props suffix
+interface UserProfileCardProps {
+  userId: string;
+  onSelect: (id: string) => void;
+}
+
+// Hooks - camelCase with use prefix
+const useUserProfile = (userId: string) => {};
+
+// Event handlers - handle prefix
+const handleSubmit = () => {};
+const handleUserClick = () => {};
+
+// Booleans - is/has/should prefix
+const isLoading = true;
+const hasError = false;
+const shouldRefetch = true;
+
+// Constants - SCREAMING_SNAKE_CASE
+const API_BASE_URL = 'https://api.example.com';
+const MAX_RETRY_ATTEMPTS = 3;
+
+// Enums
+enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+}
+```
+
+## Avoid These Patterns
+
+```typescript
+const user_profile = () => {};      // ❌ No snake_case
+const HANDLE_SUBMIT = () => {};     // ❌ No caps for functions
+const loading = true;               // ❌ Booleans need prefix
+interface userProps {}              // ❌ PascalCase for interfaces
+```
+
+## Detailed Rules
+
+### Variables
+
+```typescript
+// ✅ Descriptive camelCase
+const userList = [];
+const selectedItemId = '123';
+const formattedDate = formatDate(date);
+
+// ❌ Avoid
+const ul = [];           // Too short
+const data = [];         // Too generic
+const temp = '';         // Unclear purpose
+```
+
+### Functions
+
+```typescript
+// ✅ Verb + Noun pattern
+function fetchUserData() {}
+function calculateTotal() {}
+function validateEmail() {}
+
+// ✅ Event handlers with handle prefix
+function handleFormSubmit() {}
+function handleButtonClick() {}
+function handleInputChange() {}
+
+// ❌ Avoid
+function userData() {}   // Missing verb
+function doStuff() {}    // Too vague
+```
+
+### Types and Interfaces
+
+```typescript
+// ✅ PascalCase with descriptive suffix
+interface UserProfile {}
+interface ApiResponse {}
+type ButtonVariant = 'primary' | 'secondary';
+type UserId = string;
+
+// Props always end with Props
+interface ButtonProps {}
+interface ModalProps {}
+
+// State always ends with State
+interface AuthState {}
+interface FormState {}
+```
+
+### React Components
+
+```typescript
+// ✅ PascalCase, descriptive names
+export const UserProfileCard = () => {};
+export const NavigationHeader = () => {};
+export const DataTableRow = () => {};
+
+// ✅ HOCs with 'with' prefix
+export const withAuthentication = (Component) => {};
+export const withTheme = (Component) => {};
+
+// ✅ Context with 'Context' suffix
+export const ThemeContext = createContext({});
+export const AuthContext = createContext({});
+```
+
+### Hooks
+
+```typescript
+// ✅ Always start with 'use'
+const useAuth = () => {};
+const useLocalStorage = () => {};
+const useDebounce = () => {};
+
+// ✅ Return values follow naming conventions
+const { data, isLoading, error } = useQuery();
+const [count, setCount] = useState(0);
+const [isOpen, setIsOpen] = useState(false);
+```

@@ -1,0 +1,90 @@
+# Files & Folders Naming
+
+Consistent naming conventions for your project structure.
+
+## Naming Conventions
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Components | PascalCase | `UserProfile.tsx` |
+| Hooks | camelCase + `use` | `useUserData.ts` |
+| Utilities | camelCase | `formatDate.ts` |
+| Constants | camelCase file | `apiEndpoints.ts` |
+| Types | camelCase file | `user.types.ts` |
+| Stores | camelCase + `Store` | `authStore.ts` |
+| Services | camelCase + `Service` | `userService.ts` |
+| Tests | `.test` suffix | `Button.test.tsx` |
+| Stories | `.stories` suffix | `Button.stories.tsx` |
+
+## Directory Naming
+
+Directories use **kebab-case**:
+
+```
+src/
+├── components/
+│   ├── user-profile/
+│   ├── data-table/
+│   └── error-boundary/
+├── features/
+│   ├── user-management/
+│   └── order-processing/
+```
+
+## Examples
+
+### Component Files
+```
+✅ UserProfileCard.tsx
+✅ DataTableHeader.tsx
+✅ ErrorBoundary.tsx
+
+❌ userProfileCard.tsx
+❌ user-profile-card.tsx
+❌ User_Profile_Card.tsx
+```
+
+### Hook Files
+```
+✅ useUserProfile.ts
+✅ useLocalStorage.ts
+✅ useDebounce.ts
+
+❌ UseUserProfile.ts
+❌ use-user-profile.ts
+```
+
+### Service Files
+```
+✅ userService.ts
+✅ authService.ts
+✅ apiClient.ts
+
+❌ UserService.ts
+❌ user-service.ts
+```
+
+### Type Files
+```
+✅ user.types.ts
+✅ api.types.ts
+✅ common.types.ts
+
+❌ UserTypes.ts
+❌ user-types.ts
+```
+
+## Index Files
+
+Use `index.ts` for re-exporting:
+
+```typescript
+// components/Button/index.ts
+export { Button } from './Button';
+export type { ButtonProps } from './Button';
+```
+
+This allows cleaner imports:
+```typescript
+import { Button } from '@/components/Button';
+```

@@ -1,0 +1,216 @@
+# TanStack Query
+
+Server state management and data fetching.
+
+## Query Keys
+
+Organize query keys in a centralized file:
+
+```typescript
+// constants/queryKeys.ts
+export const queryKeys = {
+  users: {
+    all: ['users'] as const,
+    lists: () => [...queryKeys.users.all, 'list'] as const,
+    list: (filters: Filters) => [...queryKeys.users.lists(), filters] as const,
+    details: () => [...queryKeys.users.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.users.details(), id] as const,
+  },
+  posts: {
+    all: ['posts'] as const,
+    list: (filters?: PostFilters) => [...queryKeys.posts.all, 'list', filters] as const,
+    detail: (id: string) => [...queryKeys.posts.all, 'detail', id] as const,
+  },
+};
+```
+
+## Query Hooks
+
+Create custom hooks for each query:
+
+```typescript
+// features/users/hooks/useUsers.ts
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/constants/queryKeys';
+import { userService } from '../services/userService';
+
+export const useUsers = (filters?: UserFilters) => {
+  return useQuery({
+    queryKey: queryKeys.users.list(filters ?? {}),
+    queryFn: () => userService.getUsers(filters),
+  });
+};
+
+export const useUser = (id: string) => {
+  return useQuery({
+    queryKey: queryKeys.users.detail(id),
+    queryFn: () => userService.getUser(id),
+    enabled: !!id, // Only fetch when id exists
+  });
+};
+```
+
+## Mutation Hooks
+
+```typescript
+// features/users/hooks/useCreateUser.ts
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/constants/queryKeys';
+import { userService } from '../services/userService';
+
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateUserDTO) => userService.createUser(data),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.users.lists(),
+      });
+    },
+  });
+};
+```
+
+## Optimistic Updates
+
+```typescript
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserDTO }) =>
+      userService.updateUser(id, data),
+
+    onMutate: async ({ id, data }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.users.detail(id),
+      });
+
+      // Snapshot previous value
+      const previousUser = queryClient.getQueryData(
+        queryKeys.users.detail(id)
+      );
+
+      // Optimistically update
+      queryClient.setQueryData(
+        queryKeys.users.detail(id),
+        (old: User) => ({ ...old, ...data })
+      );
+
+      return { previousUser };
+    },
+
+    onError: (err, { id }, context) => {
+      // Rollback on error
+      queryClient.setQueryData(
+        queryKeys.users.detail(id),
+        context?.previousUser
+      );
+    },
+
+    onSettled: (data, error, { id }) => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.users.detail(id),
+      });
+    },
+  });
+};
+```
+
+## Delete with Optimistic Update
+
+```typescript
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => userService.deleteUser(id),
+
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.users.lists(),
+      });
+
+      const previousUsers = queryClient.getQueryData(
+        queryKeys.users.lists()
+      );
+
+      queryClient.setQueryData(
+        queryKeys.users.lists(),
+        (old: User[] = []) => old.filter((user) => user.id !== id)
+      );
+
+      return { previousUsers };
+    },
+
+    onError: (err, id, context) => {
+      queryClient.setQueryData(
+        queryKeys.users.lists(),
+        context?.previousUsers
+      );
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.users.lists(),
+      });
+    },
+  });
+};
+```
+
+## Query Options
+
+```typescript
+// Stale time and cache time
+export const useUsers = () => {
+  return useQuery({
+    queryKey: queryKeys.users.lists(),
+    queryFn: userService.getUsers,
+    staleTime: 5 * 60 * 1000,     // 5 minutes
+    gcTime: 30 * 60 * 1000,       // 30 minutes (formerly cacheTime)
+    refetchOnWindowFocus: false,
+    retry: 3,
+  });
+};
+
+// Dependent queries
+export const useUserPosts = (userId: string) => {
+  const { data: user } = useUser(userId);
+
+  return useQuery({
+    queryKey: ['users', userId, 'posts'],
+    queryFn: () => postService.getPostsByUser(userId),
+    enabled: !!user, // Only run when user is loaded
+  });
+};
+```
+
+## Provider Setup
+
+```typescript
+// app/providers/QueryProvider.tsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+export const QueryProvider = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={queryClient}>
+    {children}
+    <ReactQueryDevtools initialIsOpen={false} />
+  </QueryClientProvider>
+);
+```

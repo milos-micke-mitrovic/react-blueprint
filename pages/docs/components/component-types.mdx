@@ -1,0 +1,167 @@
+# Component Types
+
+Understanding the different types of components and when to use each.
+
+## Presentational Components
+
+Pure components that receive data via props and focus on UI rendering.
+
+```typescript
+interface UserAvatarProps {
+  src: string;
+  alt: string;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
+export const UserAvatar: React.FC<UserAvatarProps> = ({
+  src,
+  alt,
+  size = 'md',
+  className,
+}) => {
+  const sizeClasses = {
+    sm: 'w-8 h-8',
+    md: 'w-12 h-12',
+    lg: 'w-16 h-16',
+  };
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={cn('rounded-full', sizeClasses[size], className)}
+    />
+  );
+};
+```
+
+**Characteristics:**
+- No internal state (or minimal UI state)
+- No side effects
+- Easily testable
+- Highly reusable
+
+## Container Components
+
+Handle data fetching, state management, and business logic.
+
+```typescript
+export const UserProfileContainer: React.FC = () => {
+  const { userId } = useParams<{ userId: string }>();
+  const { data: user, isLoading, error } = useUserQuery(userId);
+
+  if (isLoading) return <ProfileSkeleton />;
+  if (error) return <ErrorMessage error={error} />;
+  if (!user) return <NotFound />;
+
+  return <UserProfile user={user} />;
+};
+```
+
+**Characteristics:**
+- Fetch and manage data
+- Handle side effects
+- Pass data to presentational components
+- Usually map to routes
+
+## Compound Components
+
+Components that work together to form a cohesive UI pattern.
+
+```typescript
+// Usage
+<Card>
+  <Card.Header>
+    <Card.Title>User Profile</Card.Title>
+    <Card.Actions>
+      <Button>Edit</Button>
+    </Card.Actions>
+  </Card.Header>
+  <Card.Body>
+    <p>Content goes here</p>
+  </Card.Body>
+  <Card.Footer>
+    <Button variant="secondary">Cancel</Button>
+    <Button>Save</Button>
+  </Card.Footer>
+</Card>
+```
+
+**Implementation:**
+
+```typescript
+const CardContext = createContext<{ variant?: string }>({});
+
+const Card = ({ children, variant }: CardProps) => (
+  <CardContext.Provider value={{ variant }}>
+    <div className="rounded-lg border">{children}</div>
+  </CardContext.Provider>
+);
+
+Card.Header = ({ children }: { children: ReactNode }) => (
+  <div className="border-b p-4">{children}</div>
+);
+
+Card.Title = ({ children }: { children: ReactNode }) => (
+  <h3 className="text-lg font-semibold">{children}</h3>
+);
+
+Card.Body = ({ children }: { children: ReactNode }) => (
+  <div className="p-4">{children}</div>
+);
+
+Card.Footer = ({ children }: { children: ReactNode }) => (
+  <div className="border-t p-4 flex gap-2">{children}</div>
+);
+```
+
+## Layout Components
+
+Handle page structure and layout concerns.
+
+```typescript
+interface PageLayoutProps {
+  title: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}
+
+export const PageLayout: React.FC<PageLayoutProps> = ({
+  title,
+  actions,
+  children,
+}) => (
+  <div className="min-h-screen">
+    <header className="border-b">
+      <div className="flex items-center justify-between p-4">
+        <h1 className="text-2xl font-bold">{title}</h1>
+        {actions && <div className="flex gap-2">{actions}</div>}
+      </div>
+    </header>
+    <main className="p-6">{children}</main>
+  </div>
+);
+```
+
+## Higher-Order Components (HOCs)
+
+Wrap components to add functionality. Use sparingly — prefer hooks.
+
+```typescript
+function withAuthentication<P extends object>(
+  WrappedComponent: React.ComponentType<P>
+) {
+  return function AuthenticatedComponent(props: P) {
+    const { isAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) return <LoadingSpinner />;
+    if (!isAuthenticated) return <Navigate to="/login" />;
+
+    return <WrappedComponent {...props} />;
+  };
+}
+
+// Usage
+const ProtectedDashboard = withAuthentication(Dashboard);
+```

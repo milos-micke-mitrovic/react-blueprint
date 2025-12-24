@@ -1,0 +1,211 @@
+# Component Template
+
+A standard template for creating React components.
+
+## Standard Template
+
+```typescript
+import { memo, useState, useMemo, useCallback, useEffect, type FC } from 'react';
+import { cn } from '@/utils/cn';
+
+// 1. Types at top
+interface ComponentNameProps {
+  requiredProp: string;
+  optionalProp?: boolean;
+  onAction?: () => void;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+// 2. Constants
+const DEFAULT_VALUE = 'default';
+
+// 3. Component
+export const ComponentName: FC<ComponentNameProps> = memo(({
+  requiredProp,
+  optionalProp = false,
+  onAction,
+  className,
+  children,
+}) => {
+  // 4. Hooks first
+  const [state, setState] = useState(false);
+
+  // 5. Derived state
+  const derivedValue = useMemo(() => {
+    return computeValue(requiredProp);
+  }, [requiredProp]);
+
+  // 6. Event handlers
+  const handleClick = useCallback(() => {
+    onAction?.();
+  }, [onAction]);
+
+  // 7. Effects
+  useEffect(() => {
+    // Side effect
+  }, [dependency]);
+
+  // 8. Early returns
+  if (!requiredProp) return null;
+
+  // 9. Render
+  return (
+    <div className={cn('base-styles', className)}>
+      {children}
+    </div>
+  );
+});
+
+// 10. Display name
+ComponentName.displayName = 'ComponentName';
+```
+
+## Section Breakdown
+
+### 1. Types at Top
+Always define props interface before the component:
+
+```typescript
+interface UserCardProps {
+  user: User;
+  variant?: 'default' | 'compact';
+  onEdit?: (user: User) => void;
+}
+```
+
+### 2. Constants
+Module-level constants used by the component:
+
+```typescript
+const ANIMATION_DURATION = 200;
+const SIZE_CLASSES = {
+  sm: 'p-2 text-sm',
+  md: 'p-4 text-base',
+  lg: 'p-6 text-lg',
+};
+```
+
+### 3. Hooks Order
+Always follow this order:
+1. `useState`
+2. `useReducer`
+3. `useContext`
+4. Custom hooks
+5. `useMemo`
+6. `useCallback`
+7. `useEffect`
+
+### 4. Early Returns
+Handle edge cases before the main render:
+
+```typescript
+if (isLoading) return <Skeleton />;
+if (error) return <ErrorMessage error={error} />;
+if (!data) return null;
+```
+
+### 5. Render Section
+Keep JSX clean and readable:
+
+```typescript
+return (
+  <article className={cn('card', className)}>
+    <header className="card-header">
+      <h2>{title}</h2>
+    </header>
+    <div className="card-body">
+      {children}
+    </div>
+  </article>
+);
+```
+
+## Form Component Template
+
+```typescript
+interface FormComponentProps {
+  initialData?: FormData;
+  onSubmit: (data: FormData) => Promise<void>;
+  onCancel?: () => void;
+}
+
+export const FormComponent: FC<FormComponentProps> = ({
+  initialData,
+  onSubmit,
+  onCancel,
+}) => {
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: initialData ?? defaultFormValues,
+  });
+
+  const handleSubmit = form.handleSubmit(async (data) => {
+    try {
+      await onSubmit(data);
+      form.reset();
+    } catch (error) {
+      // Handle error
+    }
+  });
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <FormField
+        control={form.control}
+        name="fieldName"
+        render={({ field }) => (
+          <Input {...field} placeholder="Enter value" />
+        )}
+      />
+
+      <div className="flex gap-2 mt-4">
+        {onCancel && (
+          <Button type="button" variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" isLoading={form.formState.isSubmitting}>
+          Submit
+        </Button>
+      </div>
+    </form>
+  );
+};
+```
+
+## List Component Template
+
+```typescript
+interface ListComponentProps<T> {
+  items: T[];
+  renderItem: (item: T) => ReactNode;
+  keyExtractor: (item: T) => string;
+  emptyMessage?: string;
+  isLoading?: boolean;
+}
+
+export function ListComponent<T>({
+  items,
+  renderItem,
+  keyExtractor,
+  emptyMessage = 'No items found',
+  isLoading,
+}: ListComponentProps<T>) {
+  if (isLoading) {
+    return <ListSkeleton />;
+  }
+
+  if (items.length === 0) {
+    return <EmptyState message={emptyMessage} />;
+  }
+
+  return (
+    <ul className="space-y-2">
+      {items.map((item) => (
+        <li key={keyExtractor(item)}>{renderItem(item)}</li>
+      ))}
+    </ul>
+  );
+}
+```

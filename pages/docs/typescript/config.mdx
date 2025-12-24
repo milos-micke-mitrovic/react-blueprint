@@ -1,0 +1,152 @@
+# TypeScript Configuration
+
+Strict TypeScript setup for React projects.
+
+## tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    // Target
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    // Strict mode
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Module handling
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    // Emit
+    "noEmit": true,
+    "skipLibCheck": true,
+
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+
+## Key Options Explained
+
+### Strict Mode Options
+
+| Option | Purpose |
+|--------|---------|
+| `strict` | Enables all strict type-checking options |
+| `noUncheckedIndexedAccess` | Adds `undefined` to index access types |
+| `noImplicitReturns` | All code paths must return a value |
+| `noFallthroughCasesInSwitch` | No fallthrough in switch statements |
+| `noUnusedLocals` | Error on unused local variables |
+| `noUnusedParameters` | Error on unused parameters |
+| `exactOptionalPropertyTypes` | Differentiate `undefined` and optional |
+
+### noUncheckedIndexedAccess Example
+
+```typescript
+const users: User[] = [];
+
+// Without noUncheckedIndexedAccess
+const user = users[0]; // type: User ❌
+
+// With noUncheckedIndexedAccess
+const user = users[0]; // type: User | undefined ✅
+
+// Forces you to handle undefined
+if (user) {
+  console.log(user.name);
+}
+```
+
+### exactOptionalPropertyTypes Example
+
+```typescript
+interface Config {
+  timeout?: number;
+}
+
+// Without exactOptionalPropertyTypes
+const config: Config = { timeout: undefined }; // ✅ Allowed
+
+// With exactOptionalPropertyTypes
+const config: Config = { timeout: undefined }; // ❌ Error
+const config: Config = {}; // ✅ Correct
+```
+
+## Vite Configuration
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+## ESLint TypeScript Rules
+
+```javascript
+// eslint.config.js
+export default {
+  rules: {
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      { argsIgnorePattern: '^_' },
+    ],
+    '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/consistent-type-imports': [
+      'error',
+      { prefer: 'type-imports' },
+    ],
+    '@typescript-eslint/no-non-null-assertion': 'warn',
+    '@typescript-eslint/prefer-nullish-coalescing': 'error',
+    '@typescript-eslint/prefer-optional-chain': 'error',
+  },
+};
+```
+
+## Recommended Extensions
+
+### VSCode Settings
+
+```json
+{
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always"
+}
+```
+
+### Type Checking in CI
+
+```yaml
+# .github/workflows/typecheck.yml
+- name: Type Check
+  run: pnpm tsc --noEmit
+```

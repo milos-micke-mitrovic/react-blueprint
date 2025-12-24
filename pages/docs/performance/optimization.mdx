@@ -1,0 +1,192 @@
+# Performance Optimization
+
+Techniques for improving React application performance.
+
+## Memoization
+
+### React.memo
+
+Prevent re-renders when props haven't changed:
+
+```typescript
+import { memo } from 'react';
+
+interface UserCardProps {
+  user: User;
+  onSelect: (id: string) => void;
+}
+
+export const UserCard = memo<UserCardProps>(({ user, onSelect }) => {
+  return (
+    <div onClick={() => onSelect(user.id)}>
+      <img src={user.avatar} alt={user.name} />
+      <span>{user.name}</span>
+    </div>
+  );
+});
+
+UserCard.displayName = 'UserCard';
+```
+
+### useMemo
+
+Memoize expensive calculations:
+
+```typescript
+const UserList = ({ users, filter }: Props) => {
+  // ✅ Only recalculates when users or filter changes
+  const filteredUsers = useMemo(() => {
+    return users
+      .filter(user => user.name.includes(filter))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [users, filter]);
+
+  return (
+    <ul>
+      {filteredUsers.map(user => (
+        <UserCard key={user.id} user={user} />
+      ))}
+    </ul>
+  );
+};
+```
+
+### useCallback
+
+Memoize event handlers:
+
+```typescript
+const UserList = ({ users, onSelectUser }: Props) => {
+  // ✅ Stable reference for child components
+  const handleSelect = useCallback((userId: string) => {
+    onSelectUser(userId);
+  }, [onSelectUser]);
+
+  return (
+    <ul>
+      {users.map(user => (
+        <UserCard
+          key={user.id}
+          user={user}
+          onSelect={handleSelect}
+        />
+      ))}
+    </ul>
+  );
+};
+```
+
+## Virtualization
+
+For long lists (100+ items), use virtualization:
+
+```typescript
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const VirtualizedList = ({ items }: { items: Item[] }) => {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 50,
+    overscan: 5,
+  });
+
+  return (
+    <div ref={parentRef} className="h-[400px] overflow-auto">
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          position: 'relative',
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => (
+          <div
+            key={virtualItem.key}
+            style={{
+              position: 'absolute',
+              top: 0,
+              transform: `translateY(${virtualItem.start}px)`,
+              height: `${virtualItem.size}px`,
+            }}
+          >
+            <ItemCard item={items[virtualItem.index]} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+## Debounce User Input
+
+```typescript
+import { useDeferredValue, useState, useMemo } from 'react';
+
+const SearchInput = () => {
+  const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
+
+  // Expensive filter using deferred value
+  const results = useMemo(() => {
+    return items.filter(item =>
+      item.name.toLowerCase().includes(deferredQuery.toLowerCase())
+    );
+  }, [deferredQuery]);
+
+  return (
+    <>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search..."
+      />
+      <ResultsList results={results} />
+    </>
+  );
+};
+```
+
+## Image Optimization
+
+```typescript
+// Lazy load images
+<img
+  src={imageSrc}
+  alt={imageAlt}
+  loading="lazy"
+  decoding="async"
+/>
+
+// Responsive images
+<picture>
+  <source
+    srcSet="/image-mobile.webp"
+    media="(max-width: 768px)"
+  />
+  <source
+    srcSet="/image-desktop.webp"
+    media="(min-width: 769px)"
+  />
+  <img src="/image-fallback.jpg" alt="Description" />
+</picture>
+```
+
+## When to Optimize
+
+1. **Measure first** — Use React DevTools Profiler
+2. **Optimize hot paths** — Focus on frequently rendered components
+3. **Virtualize long lists** — 100+ items
+4. **Debounce inputs** — Search, filters
+5. **Lazy load below fold** — Images, heavy components
+
+## Performance Rules
+
+| Rule | Target |
+|------|--------|
+| Main bundle | < 200KB gzipped |
+| First Contentful Paint | < 1.5s |
+| Time to Interactive | < 3.5s |
+| Largest Contentful Paint | < 2.5s |

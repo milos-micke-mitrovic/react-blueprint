@@ -1,0 +1,215 @@
+# TypeScript Patterns
+
+Best practices for using TypeScript in React.
+
+## Interfaces vs Types
+
+```typescript
+// Interfaces - for extendable object shapes
+interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+interface AdminUser extends User {
+  permissions: Permission[];
+  role: 'admin';
+}
+
+// Types - for unions, primitives, computed types
+type UserId = string;
+type UserRole = 'admin' | 'user' | 'guest';
+type UserWithRole = User & { role: UserRole };
+
+// Const assertions for literal types
+const ROLES = ['admin', 'user', 'guest'] as const;
+type Role = typeof ROLES[number]; // 'admin' | 'user' | 'guest'
+```
+
+## Type Guards
+
+```typescript
+// Custom type guard
+function isUser(value: unknown): value is User {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'email' in value &&
+    typeof (value as User).id === 'string' &&
+    typeof (value as User).email === 'string'
+  );
+}
+
+// Usage
+if (isUser(data)) {
+  console.log(data.email); // TypeScript knows it's User
+}
+
+// Discriminated unions
+interface SuccessResponse {
+  status: 'success';
+  data: User;
+}
+
+interface ErrorResponse {
+  status: 'error';
+  error: string;
+}
+
+type ApiResponse = SuccessResponse | ErrorResponse;
+
+function handleResponse(response: ApiResponse) {
+  if (response.status === 'success') {
+    // TypeScript knows it's SuccessResponse
+    console.log(response.data);
+  } else {
+    // TypeScript knows it's ErrorResponse
+    console.log(response.error);
+  }
+}
+```
+
+## Generic Components
+
+```typescript
+// Generic list component
+interface ListProps<T> {
+  items: T[];
+  renderItem: (item: T) => React.ReactNode;
+  keyExtractor: (item: T) => string;
+}
+
+function List<T>({ items, renderItem, keyExtractor }: ListProps<T>) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={keyExtractor(item)}>{renderItem(item)}</li>
+      ))}
+    </ul>
+  );
+}
+
+// Usage
+<List
+  items={users}
+  renderItem={(user) => <span>{user.name}</span>}
+  keyExtractor={(user) => user.id}
+/>
+```
+
+## Utility Types
+
+```typescript
+// Partial - all properties optional
+type PartialUser = Partial<User>;
+
+// Required - all properties required
+type RequiredUser = Required<User>;
+
+// Pick - select specific properties
+type UserPreview = Pick<User, 'id' | 'name'>;
+
+// Omit - exclude properties
+type UserWithoutId = Omit<User, 'id'>;
+
+// Record - object with specific key/value types
+type UserMap = Record<string, User>;
+
+// ReturnType - extract function return type
+type FetchResult = ReturnType<typeof fetchUser>;
+
+// Parameters - extract function parameters
+type FetchParams = Parameters<typeof fetchUser>;
+```
+
+## React Component Types
+
+```typescript
+// Function component with children
+interface CardProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+// Props with HTML attributes
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+  isLoading?: boolean;
+}
+
+// Forward ref component
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+}
+
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, ...props }, ref) => {
+    // ...
+  }
+);
+```
+
+## Event Types
+
+```typescript
+// Event handlers
+const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {};
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {};
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {};
+const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {};
+
+// Generic event handler type
+type EventHandler<T extends HTMLElement> = (
+  event: React.SyntheticEvent<T>
+) => void;
+```
+
+## Strict Rules
+
+1. **No `any`** — Use `unknown` + type guards instead
+2. **No type assertions** — Prefer type guards over `as`
+3. **Explicit return types** — For exported functions
+4. **Readonly by default** — For props and constants
+
+```typescript
+// ❌ Avoid
+const data: any = fetchData();
+const user = response as User;
+
+// ✅ Prefer
+const data: unknown = fetchData();
+if (isUser(data)) {
+  // Use data as User
+}
+
+// Readonly
+interface Props {
+  readonly items: readonly Item[];
+}
+```
+
+## Zod Integration
+
+```typescript
+import { z } from 'zod';
+
+// Define schema
+const userSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  name: z.string().min(1),
+  role: z.enum(['admin', 'user', 'guest']),
+});
+
+// Infer type from schema
+type User = z.infer<typeof userSchema>;
+
+// Validate at runtime
+const result = userSchema.safeParse(data);
+if (result.success) {
+  const user: User = result.data;
+}
+```
