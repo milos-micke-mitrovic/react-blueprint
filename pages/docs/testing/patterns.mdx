@@ -1,0 +1,213 @@
+# Test Patterns
+
+Testing strategies for React applications.
+
+## Component Tests
+
+```typescript
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
+import { UserProfile } from './UserProfile';
+
+describe('UserProfile', () => {
+  const defaultProps = {
+    user: {
+      id: '1',
+      name: 'John Doe',
+      email: 'john@example.com',
+    },
+    onEdit: vi.fn(),
+  };
+
+  it('renders user information', () => {
+    render(<UserProfile {...defaultProps} />);
+
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText('john@example.com')).toBeInTheDocument();
+  });
+
+  it('calls onEdit when edit button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<UserProfile {...defaultProps} />);
+
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+
+    expect(defaultProps.onEdit).toHaveBeenCalledWith(defaultProps.user);
+  });
+
+  it('renders loading state', () => {
+    render(<UserProfile {...defaultProps} isLoading />);
+
+    expect(screen.getByTestId('skeleton')).toBeInTheDocument();
+  });
+});
+```
+
+## Hook Tests
+
+```typescript
+import { renderHook, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { useUsers } from './useUsers';
+import { createWrapper } from '@/test/utils';
+
+describe('useUsers', () => {
+  it('fetches and returns user data', async () => {
+    const { result } = renderHook(() => useUsers(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data).toEqual([
+      { id: '1', name: 'John' },
+      { id: '2', name: 'Jane' },
+    ]);
+  });
+
+  it('handles error state', async () => {
+    // Mock API to fail
+    server.use(
+      http.get('/users', () => {
+        return HttpResponse.json({ error: 'Failed' }, { status: 500 });
+      })
+    );
+
+    const { result } = renderHook(() => useUsers(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+  });
+});
+```
+
+## Form Tests
+
+```typescript
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { LoginForm } from './LoginForm';
+
+describe('LoginForm', () => {
+  const mockOnSubmit = vi.fn();
+
+  beforeEach(() => {
+    mockOnSubmit.mockClear();
+  });
+
+  it('submits with valid data', async () => {
+    const user = userEvent.setup();
+    render(<LoginForm onSubmit={mockOnSubmit} />);
+
+    await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'password123');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'password123',
+      });
+    });
+  });
+
+  it('shows validation errors', async () => {
+    const user = userEvent.setup();
+    render(<LoginForm onSubmit={mockOnSubmit} />);
+
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByText(/email is required/i)).toBeInTheDocument();
+    expect(mockOnSubmit).not.toHaveBeenCalled();
+  });
+});
+```
+
+## MSW for API Mocking
+
+```typescript
+// test/mocks/handlers.ts
+import { http, HttpResponse } from 'msw';
+
+export const handlers = [
+  http.get('/api/users', () => {
+    return HttpResponse.json([
+      { id: '1', name: 'John', email: 'john@test.com' },
+      { id: '2', name: 'Jane', email: 'jane@test.com' },
+    ]);
+  }),
+
+  http.post('/api/users', async ({ request }) => {
+    const body = await request.json();
+    return HttpResponse.json(
+      { id: '3', ...body },
+      { status: 201 }
+    );
+  }),
+];
+
+// test/mocks/server.ts
+import { setupServer } from 'msw/node';
+import { handlers } from './handlers';
+
+export const server = setupServer(...handlers);
+
+// test/setup.ts
+import { beforeAll, afterEach, afterAll } from 'vitest';
+import { server } from './mocks/server';
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+```
+
+## Test Utilities
+
+```typescript
+// test/utils.tsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, type RenderOptions } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+export const createWrapper = () => {
+  const queryClient = createTestQueryClient();
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>{children}</BrowserRouter>
+    </QueryClientProvider>
+  );
+};
+
+export const renderWithProviders = (
+  ui: React.ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'>
+) => {
+  return render(ui, { wrapper: createWrapper(), ...options });
+};
+```
+
+## What to Test
+
+| Priority | What | How |
+|----------|------|-----|
+| High | User interactions | `userEvent` |
+| High | Rendered output | `render` + `screen` |
+| High | Form validation | Input + submit |
+| Medium | Error states | Mock error responses |
+| Medium | Loading states | Async handling |
+| Low | Styling | Visual regression |

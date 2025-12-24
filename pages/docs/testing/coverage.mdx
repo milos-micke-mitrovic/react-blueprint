@@ -1,0 +1,178 @@
+# Coverage Requirements
+
+Test coverage targets and guidelines.
+
+## Minimum Coverage
+
+| Metric | Target |
+|--------|--------|
+| Statements | 80% |
+| Branches | 75% |
+| Functions | 80% |
+| Lines | 80% |
+
+## Vitest Configuration
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      exclude: [
+        'node_modules/',
+        'test/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/types/**',
+      ],
+      thresholds: {
+        statements: 80,
+        branches: 75,
+        functions: 80,
+        lines: 80,
+      },
+    },
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+## Running Coverage
+
+```bash
+# Run tests with coverage
+pnpm test:coverage
+
+# Watch mode
+pnpm test
+
+# CI mode
+pnpm test:ci
+```
+
+## Package.json Scripts
+
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run --coverage --reporter=junit"
+  }
+}
+```
+
+## What to Cover
+
+### Must Test
+
+- User interactions (clicks, typing)
+- Form submissions and validation
+- Conditional rendering
+- Error and loading states
+- Custom hooks with side effects
+
+### Skip Testing
+
+- Third-party library internals
+- Simple presentational components
+- Trivial getters/setters
+- CSS/styling details
+
+## Testing Rules
+
+### 1. Test Behavior, Not Implementation
+
+```typescript
+// ❌ Testing implementation
+expect(component.state.isOpen).toBe(true);
+
+// ✅ Testing behavior
+expect(screen.getByRole('dialog')).toBeVisible();
+```
+
+### 2. Use Semantic Queries
+
+```typescript
+// Priority order (best to worst)
+screen.getByRole('button', { name: /submit/i });  // Best
+screen.getByLabelText('Email');                    // Good
+screen.getByPlaceholderText('Enter email');        // OK
+screen.getByText('Submit');                        // OK
+screen.getByTestId('submit-btn');                  // Last resort
+```
+
+### 3. One Assertion Per Test
+
+```typescript
+// ❌ Multiple assertions
+it('renders correctly', () => {
+  expect(screen.getByText('Title')).toBeInTheDocument();
+  expect(screen.getByRole('button')).toBeEnabled();
+  expect(screen.getByText('Footer')).toBeInTheDocument();
+});
+
+// ✅ Focused tests
+it('renders the title', () => {
+  expect(screen.getByText('Title')).toBeInTheDocument();
+});
+
+it('has an enabled submit button', () => {
+  expect(screen.getByRole('button')).toBeEnabled();
+});
+```
+
+### 4. Mock at Boundaries
+
+```typescript
+// ✅ Mock external APIs
+vi.mock('@/services/api', () => ({
+  userService: {
+    getUsers: vi.fn().mockResolvedValue([{ id: '1', name: 'John' }]),
+  },
+}));
+
+// ❌ Don't mock internal implementation
+vi.mock('./utils', () => ({
+  formatDate: vi.fn(),
+}));
+```
+
+## CI Integration
+
+```yaml
+# .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm test:ci
+      - uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+```

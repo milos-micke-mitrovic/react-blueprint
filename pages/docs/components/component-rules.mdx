@@ -1,0 +1,197 @@
+# Component Rules
+
+Guidelines for writing clean, maintainable components.
+
+## 1. Single Responsibility
+
+Each component should do one thing well.
+
+```typescript
+// ❌ Bad - Does too much
+const UserPage = () => {
+  const [users, setUsers] = useState([]);
+  const [filter, setFilter] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  // ... 200 lines of mixed concerns
+
+  return (
+    <div>
+      {/* Filter UI, sorting UI, table, pagination all mixed */}
+    </div>
+  );
+};
+
+// ✅ Good - Split into focused components
+const UserPage = () => (
+  <PageLayout title="Users">
+    <UserFilters />
+    <UserList />
+    <UserPagination />
+  </PageLayout>
+);
+```
+
+## 2. Size Limits
+
+- Maximum **150 lines** per component file
+- Maximum **50 lines** of JSX in render
+
+If you exceed these limits, split into smaller components.
+
+## 3. Composition Over Configuration
+
+```typescript
+// ❌ Too many config props
+<Card
+  title="User"
+  showHeader={true}
+  headerActions={[{ label: 'Edit', onClick: handleEdit }]}
+  showFooter={true}
+  footerAlignment="right"
+  variant="elevated"
+/>
+
+// ✅ Use composition
+<Card>
+  <Card.Header>
+    <Card.Title>User</Card.Title>
+    <Card.Actions>
+      <Button onClick={handleEdit}>Edit</Button>
+    </Card.Actions>
+  </Card.Header>
+  <Card.Body>{/* Content */}</Card.Body>
+</Card>
+```
+
+## 4. No Prop Drilling
+
+Use Context or Zustand for deeply nested data.
+
+```typescript
+// ❌ Prop drilling
+<App user={user}>
+  <Layout user={user}>
+    <Sidebar user={user}>
+      <UserMenu user={user} />
+    </Sidebar>
+  </Layout>
+</App>
+
+// ✅ Use context or store
+<App>
+  <Layout>
+    <Sidebar>
+      <UserMenu /> {/* Gets user from useAuth() */}
+    </Sidebar>
+  </Layout>
+</App>
+```
+
+## 5. Avoid Inline Function Props (in loops)
+
+```typescript
+// ❌ Creates new function on each render
+{users.map(user => (
+  <UserCard
+    key={user.id}
+    user={user}
+    onSelect={() => handleSelect(user.id)}
+  />
+))}
+
+// ✅ Pass id and handle in child, or use useCallback
+{users.map(user => (
+  <UserCard
+    key={user.id}
+    user={user}
+    onSelect={handleSelect}
+  />
+))}
+
+// In UserCard:
+const UserCard = ({ user, onSelect }) => (
+  <button onClick={() => onSelect(user.id)}>
+    {user.name}
+  </button>
+);
+```
+
+## 6. Extract Complex Logic to Hooks
+
+```typescript
+// ❌ Too much logic in component
+const UserForm = () => {
+  const [values, setValues] = useState({});
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validate = () => { /* ... */ };
+  const handleChange = () => { /* ... */ };
+  const handleSubmit = async () => { /* ... */ };
+
+  // ... more logic
+};
+
+// ✅ Extract to custom hook
+const UserForm = () => {
+  const {
+    values,
+    errors,
+    isSubmitting,
+    handleChange,
+    handleSubmit
+  } = useUserForm();
+
+  return <form onSubmit={handleSubmit}>...</form>;
+};
+```
+
+## 7. Keep Props Interface Clean
+
+```typescript
+// ✅ Good props interface
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+  isLoading?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+  children: ReactNode;
+}
+
+// ❌ Avoid
+interface ButtonProps {
+  variant?: string;           // Too loose
+  style?: object;             // Avoid style prop
+  className1?: string;        // Bad naming
+  data?: any;                 // No any
+  onClick?: Function;         // Use specific type
+}
+```
+
+## 8. Forward Refs When Needed
+
+```typescript
+import { forwardRef } from 'react';
+
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+}
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, className, ...props }, ref) => (
+    <div>
+      {label && <label>{label}</label>}
+      <input
+        ref={ref}
+        className={cn('input-base', error && 'input-error', className)}
+        {...props}
+      />
+      {error && <span className="text-red-500">{error}</span>}
+    </div>
+  )
+);
+
+Input.displayName = 'Input';
+```

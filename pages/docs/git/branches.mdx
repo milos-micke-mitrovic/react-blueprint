@@ -1,0 +1,86 @@
+# Branch Naming
+
+Consistent Git branch naming conventions.
+
+## Convention
+
+```
+<type>/<ticket-id>-<short-description>
+```
+
+## Branch Types
+
+| Type | Purpose | Example |
+|------|---------|---------|
+| `feature/` | New features | `feature/PROJ-123-user-auth` |
+| `bugfix/` | Bug fixes | `bugfix/PROJ-456-fix-login` |
+| `hotfix/` | Urgent production fixes | `hotfix/PROJ-789-security-patch` |
+| `refactor/` | Code refactoring | `refactor/PROJ-101-cleanup-api` |
+| `docs/` | Documentation | `docs/PROJ-202-api-docs` |
+| `test/` | Test additions | `test/PROJ-303-add-unit-tests` |
+| `chore/` | Maintenance tasks | `chore/PROJ-404-update-deps` |
+
+## Examples
+
+```bash
+# Good
+feature/PROJ-123-user-authentication
+bugfix/PROJ-456-fix-login-redirect
+hotfix/PROJ-789-critical-security-fix
+refactor/PROJ-101-simplify-user-service
+docs/PROJ-202-update-readme
+chore/PROJ-303-upgrade-react-18
+
+# Bad
+feature/new-stuff           # No ticket, vague
+john/working               # Personal name
+fix                        # Too short
+PROJ-123                   # No type or description
+feature/PROJ-123-implement-the-new-user-authentication-system-with-oauth
+  # Too long
+```
+
+## Rules
+
+1. **Always lowercase** — No capital letters in branch names
+2. **Use hyphens** — Not underscores or camelCase
+3. **Include ticket ID** — Link to issue tracker
+4. **Keep it short** — Max 50 characters for description
+5. **Be descriptive** — Clear purpose at a glance
+
+## Protected Branches
+
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `main` | Production code | Require PR, reviews, CI pass |
+| `develop` | Integration branch | Require PR, CI pass |
+| `release/*` | Release preparation | Require PR |
+
+## Workflow
+
+```bash
+# Create feature branch from develop
+git checkout develop
+git pull origin develop
+git checkout -b feature/PROJ-123-user-auth
+
+# Work on feature...
+git add .
+git commit -m "feat(auth): add login form"
+
+# Push and create PR
+git push -u origin feature/PROJ-123-user-auth
+```
+
+## Branch Cleanup
+
+```bash
+# Delete local branch after merge
+git branch -d feature/PROJ-123-user-auth
+
+# Delete remote branch
+git push origin --delete feature/PROJ-123-user-auth
+
+# Prune deleted remote branches
+git fetch --prune
+```

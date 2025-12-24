@@ -1,0 +1,203 @@
+# Security Best Practices
+
+Essential security measures for React applications.
+
+## Input Sanitization
+
+### HTML Sanitization
+
+```typescript
+import DOMPurify from 'dompurify';
+
+// Sanitize user-generated HTML
+const SafeHTML = ({ html }: { html: string }) => {
+  const sanitized = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p'],
+    ALLOWED_ATTR: ['href', 'target'],
+  });
+
+  return <div dangerouslySetInnerHTML={{ __html: sanitized }} />;
+};
+```
+
+### URL Encoding
+
+```typescript
+// Always encode user input in URLs
+const searchUrl = `/search?q=${encodeURIComponent(userInput)}`;
+
+// Validate URLs before using
+const isValidUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+};
+```
+
+## Environment Variables
+
+### Client-Side Variables
+
+```bash
+# .env
+# ✅ Client-side (VITE_ prefix) - Will be exposed
+VITE_API_URL=https://api.example.com
+VITE_PUBLIC_KEY=pk_live_xxx
+
+# ❌ Never expose these to client
+DATABASE_URL=postgres://...
+API_SECRET=xxx
+JWT_SECRET=xxx
+```
+
+### Type-Safe Environment
+
+```typescript
+// env.ts
+import { z } from 'zod';
+
+const envSchema = z.object({
+  VITE_API_URL: z.string().url(),
+  VITE_PUBLIC_KEY: z.string(),
+});
+
+export const env = envSchema.parse({
+  VITE_API_URL: import.meta.env.VITE_API_URL,
+  VITE_PUBLIC_KEY: import.meta.env.VITE_PUBLIC_KEY,
+});
+```
+
+## Authentication
+
+### Token Storage
+
+```typescript
+// ❌ Never store in localStorage for sensitive apps
+localStorage.setItem('token', token);
+
+// ✅ Use httpOnly cookies (set by server)
+// Or memory + refresh token pattern
+
+// Zustand with memory storage
+const useAuthStore = create<AuthState>((set) => ({
+  token: null, // In memory only
+  // ...
+}));
+```
+
+### API Request Security
+
+```typescript
+// Always use HTTPS
+const API_URL = 'https://api.example.com';
+
+// Include credentials for cookie-based auth
+apiClient.defaults.withCredentials = true;
+
+// Add CSRF token if needed
+apiClient.interceptors.request.use((config) => {
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken;
+  }
+  return config;
+});
+```
+
+## Content Security Policy
+
+```typescript
+// next.config.js or vite.config.ts
+const securityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self'",
+      "connect-src 'self' https://api.example.com",
+    ].join('; '),
+  },
+  {
+    key: 'X-Frame-Options',
+    value: 'DENY',
+  },
+  {
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
+  },
+];
+```
+
+## Dependency Security
+
+```bash
+# Regular security audits
+pnpm audit
+
+# Fix vulnerabilities
+pnpm audit --fix
+
+# Check for outdated packages
+pnpm outdated
+```
+
+## Security Checklist
+
+- [ ] All user input is sanitized
+- [ ] HTTPS only in production
+- [ ] Environment variables properly scoped
+- [ ] No secrets in client code
+- [ ] CSP headers configured
+- [ ] XSS protection (DOMPurify)
+- [ ] CSRF protection
+- [ ] Secure cookie settings
+- [ ] Regular `pnpm audit`
+- [ ] Dependencies updated
+- [ ] Auth tokens handled securely
+
+## Common Vulnerabilities
+
+### XSS Prevention
+
+```typescript
+// ❌ Dangerous
+<div dangerouslySetInnerHTML={{ __html: userInput }} />
+
+// ✅ Safe - escaped by React
+<div>{userInput}</div>
+
+// ✅ Safe - sanitized
+<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userInput) }} />
+```
+
+### Prototype Pollution
+
+```typescript
+// ❌ Dangerous
+const merged = { ...defaults, ...userObject };
+
+// ✅ Validate input structure
+const validated = userSchema.parse(userObject);
+const merged = { ...defaults, ...validated };
+```
+
+### Open Redirect
+
+```typescript
+// ❌ Dangerous
+window.location.href = userProvidedUrl;
+
+// ✅ Validate redirect URL
+const safeRedirect = (url: string) => {
+  const allowed = ['/', '/dashboard', '/profile'];
+  if (allowed.includes(url)) {
+    window.location.href = url;
+  }
+};
+```

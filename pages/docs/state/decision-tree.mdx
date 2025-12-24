@@ -1,0 +1,143 @@
+# State Management Decision Tree
+
+When to use what for managing state in your React application.
+
+## Decision Tree
+
+```
+Is state needed by a single component?
+├── YES → useState
+└── NO → Shared between parent-child only?
+    ├── YES → Pass via props
+    └── NO → Is it server/async data?
+        ├── YES → TanStack Query
+        └── NO → Is it form state?
+            ├── YES → React Hook Form
+            └── NO → Is it global UI state?
+                ├── YES → Zustand
+                └── NO → React Context
+```
+
+## Quick Reference
+
+| State Type | Solution | Example |
+|------------|----------|---------|
+| Component UI state | `useState` | Modal open/close, input value |
+| Complex local state | `useReducer` | Multi-step form, complex toggles |
+| Form data | React Hook Form | Login form, settings form |
+| Server data | TanStack Query | User list, API responses |
+| Global UI (modals, theme) | Zustand | Toast notifications, sidebar state |
+| Auth state | Zustand + persist | Current user, tokens |
+| Feature flags | React Context | A/B testing, permissions |
+
+## Detailed Examples
+
+### Local Component State
+
+```typescript
+const Counter = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <button onClick={() => setCount(c => c + 1)}>
+      Count: {count}
+    </button>
+  );
+};
+```
+
+### Complex Local State
+
+```typescript
+type State = { step: number; data: FormData };
+type Action =
+  | { type: 'NEXT_STEP' }
+  | { type: 'PREV_STEP' }
+  | { type: 'SET_DATA'; payload: Partial<FormData> };
+
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case 'NEXT_STEP':
+      return { ...state, step: state.step + 1 };
+    case 'PREV_STEP':
+      return { ...state, step: state.step - 1 };
+    case 'SET_DATA':
+      return { ...state, data: { ...state.data, ...action.payload } };
+  }
+};
+
+const MultiStepForm = () => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  // ...
+};
+```
+
+### Server State
+
+```typescript
+// Always use TanStack Query for API data
+const UserList = () => {
+  const { data: users, isLoading, error } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => userService.getUsers(),
+  });
+
+  if (isLoading) return <Skeleton />;
+  if (error) return <Error />;
+
+  return <List items={users} />;
+};
+```
+
+### Global UI State
+
+```typescript
+// Zustand for global UI state
+const useUIStore = create<UIState>((set) => ({
+  isSidebarOpen: true,
+  toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
+}));
+
+// Use anywhere in app
+const Sidebar = () => {
+  const isOpen = useUIStore((s) => s.isSidebarOpen);
+  return isOpen ? <SidebarContent /> : null;
+};
+```
+
+## Anti-Patterns to Avoid
+
+### Don't Store Server Data in Zustand
+
+```typescript
+// ❌ Wrong
+const useUserStore = create((set) => ({
+  users: [],
+  fetchUsers: async () => {
+    const users = await api.getUsers();
+    set({ users });
+  },
+}));
+
+// ✅ Correct - Use TanStack Query
+const useUsers = () => useQuery({
+  queryKey: ['users'],
+  queryFn: api.getUsers,
+});
+```
+
+### Don't Duplicate State
+
+```typescript
+// ❌ Wrong - Derived state stored separately
+const [items, setItems] = useState([]);
+const [filteredItems, setFilteredItems] = useState([]);
+
+// ✅ Correct - Derive from source
+const [items, setItems] = useState([]);
+const [filter, setFilter] = useState('');
+const filteredItems = useMemo(
+  () => items.filter(i => i.name.includes(filter)),
+  [items, filter]
+);
+```

@@ -1,0 +1,144 @@
+# Commit Messages
+
+Conventional Commits format for clear history.
+
+## Format
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+## Types
+
+| Type | Purpose | Changelog |
+|------|---------|-----------|
+| `feat` | New feature | Minor version bump |
+| `fix` | Bug fix | Patch version bump |
+| `docs` | Documentation only | No version bump |
+| `style` | Formatting, whitespace | No version bump |
+| `refactor` | Code change, no behavior change | No version bump |
+| `perf` | Performance improvement | Patch version bump |
+| `test` | Adding tests | No version bump |
+| `build` | Build system changes | No version bump |
+| `ci` | CI configuration | No version bump |
+| `chore` | Maintenance tasks | No version bump |
+| `revert` | Revert previous commit | Varies |
+
+## Scopes
+
+Common scopes for React projects:
+
+| Scope | Usage |
+|-------|-------|
+| `auth` | Authentication features |
+| `users` | User management |
+| `ui` | UI components |
+| `api` | API services |
+| `config` | Configuration |
+| `deps` | Dependencies |
+
+## Examples
+
+### Good Commits
+
+```bash
+feat(auth): add JWT token refresh
+
+fix(users): resolve infinite loop in profile page
+
+docs(readme): update installation instructions
+
+refactor(api): simplify error handling logic
+
+test(auth): add unit tests for login flow
+
+chore(deps): upgrade React to v18.2
+```
+
+### With Body
+
+```bash
+feat(auth): implement OAuth2 login
+
+Add Google and GitHub OAuth providers.
+Includes token refresh and session management.
+
+Closes #123
+```
+
+### Breaking Change
+
+```bash
+feat(api)!: change response format
+
+BREAKING CHANGE: API responses now use `data` wrapper.
+
+Before: { users: [...] }
+After: { data: { users: [...] } }
+```
+
+## Rules
+
+1. **Imperative mood** — "add feature" not "added feature"
+2. **Lowercase** — Type and scope in lowercase
+3. **No period** — Subject line doesn't end with period
+4. **Max 72 chars** — Subject line length limit
+5. **Blank line** — Between subject and body
+
+## Bad Examples
+
+```bash
+# ❌ Avoid
+updated stuff
+WIP
+fix bug
+FEAT: Add feature
+feat(auth): Added new login.
+misc changes
+```
+
+## Commitlint Setup
+
+```bash
+pnpm add -D @commitlint/cli @commitlint/config-conventional
+```
+
+```javascript
+// commitlint.config.js
+export default {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert'],
+    ],
+    'scope-case': [2, 'always', 'lower-case'],
+    'subject-case': [2, 'always', 'lower-case'],
+    'subject-max-length': [2, 'always', 72],
+  },
+};
+```
+
+## Husky Hook
+
+```bash
+# .husky/commit-msg
+npx --no -- commitlint --edit $1
+```
+
+## Git Aliases
+
+```bash
+# ~/.gitconfig
+[alias]
+  cm = commit -m
+  co = checkout
+  br = branch
+  st = status
+  lg = log --oneline --graph --decorate
+```

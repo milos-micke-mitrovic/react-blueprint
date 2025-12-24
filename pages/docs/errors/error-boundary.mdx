@@ -1,0 +1,187 @@
+# Error Boundary
+
+Catching and handling React component errors.
+
+## Basic Error Boundary
+
+```typescript
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+    this.props.onError?.(error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? <DefaultErrorFallback error={this.state.error} />;
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+## Default Fallback UI
+
+```typescript
+interface ErrorFallbackProps {
+  error: Error | null;
+  onReset?: () => void;
+}
+
+const DefaultErrorFallback = ({ error, onReset }: ErrorFallbackProps) => (
+  <div className="flex min-h-[400px] flex-col items-center justify-center p-8">
+    <div className="text-center">
+      <h2 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">
+        Something went wrong
+      </h2>
+      <p className="mb-4 text-gray-600 dark:text-gray-400">
+        {error?.message ?? 'An unexpected error occurred'}
+      </p>
+      {onReset && (
+        <button
+          onClick={onReset}
+          className="rounded-lg bg-orange-500 px-4 py-2 text-white hover:bg-orange-600"
+        >
+          Try Again
+        </button>
+      )}
+    </div>
+  </div>
+);
+```
+
+## Usage Patterns
+
+### Wrap Routes
+
+```typescript
+// app/router/Router.tsx
+const Router = () => (
+  <Routes>
+    <Route
+      path="/dashboard"
+      element={
+        <ErrorBoundary fallback={<PageError />}>
+          <Dashboard />
+        </ErrorBoundary>
+      }
+    />
+  </Routes>
+);
+```
+
+### Wrap Feature Sections
+
+```typescript
+const Dashboard = () => (
+  <div className="grid gap-4">
+    <ErrorBoundary fallback={<WidgetError />}>
+      <StatsWidget />
+    </ErrorBoundary>
+
+    <ErrorBoundary fallback={<WidgetError />}>
+      <ChartWidget />
+    </ErrorBoundary>
+
+    <ErrorBoundary fallback={<WidgetError />}>
+      <ActivityFeed />
+    </ErrorBoundary>
+  </div>
+);
+```
+
+### With Error Reporting
+
+```typescript
+const AppErrorBoundary = ({ children }: { children: ReactNode }) => (
+  <ErrorBoundary
+    onError={(error, errorInfo) => {
+      // Send to error tracking service
+      errorReportingService.captureException(error, {
+        extra: { componentStack: errorInfo.componentStack },
+      });
+    }}
+    fallback={<AppCrashScreen />}
+  >
+    {children}
+  </ErrorBoundary>
+);
+```
+
+## React Error Boundary Library
+
+Using `react-error-boundary` for more features:
+
+```typescript
+import { ErrorBoundary } from 'react-error-boundary';
+
+const ErrorFallback = ({
+  error,
+  resetErrorBoundary,
+}: {
+  error: Error;
+  resetErrorBoundary: () => void;
+}) => (
+  <div role="alert">
+    <p>Something went wrong:</p>
+    <pre>{error.message}</pre>
+    <button onClick={resetErrorBoundary}>Try again</button>
+  </div>
+);
+
+const App = () => (
+  <ErrorBoundary
+    FallbackComponent={ErrorFallback}
+    onReset={() => {
+      // Reset app state
+    }}
+    resetKeys={[userId]}
+  >
+    <Dashboard />
+  </ErrorBoundary>
+);
+```
+
+## Error Boundary Limitations
+
+Error boundaries do **NOT** catch:
+
+- Event handler errors
+- Async code (setTimeout, promises)
+- Server-side rendering errors
+- Errors in the boundary itself
+
+For these, use try-catch or `.catch()`:
+
+```typescript
+const handleClick = async () => {
+  try {
+    await submitForm();
+  } catch (error) {
+    toast.error('Failed to submit form');
+  }
+};
+```

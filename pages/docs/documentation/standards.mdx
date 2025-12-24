@@ -1,0 +1,201 @@
+# Documentation Standards
+
+Guidelines for documenting code and features.
+
+## Component Documentation
+
+```typescript
+/**
+ * UserCard displays user information in a card format.
+ *
+ * @example
+ * ```tsx
+ * <UserCard
+ *   user={userData}
+ *   variant="compact"
+ *   onEdit={handleEdit}
+ * />
+ * ```
+ */
+interface UserCardProps {
+  /** The user object to display */
+  user: User;
+
+  /** Visual variant of the card */
+  variant?: 'default' | 'compact';
+
+  /** Callback when edit button is clicked */
+  onEdit?: (user: User) => void;
+
+  /** Additional CSS classes */
+  className?: string;
+}
+
+export const UserCard: React.FC<UserCardProps> = ({
+  user,
+  variant = 'default',
+  onEdit,
+  className,
+}) => {
+  // Implementation
+};
+```
+
+## Hook Documentation
+
+```typescript
+/**
+ * Custom hook for managing user data with caching.
+ *
+ * @param userId - The ID of the user to fetch
+ * @returns Object containing user data, loading state, and error
+ *
+ * @example
+ * ```tsx
+ * const { data, isLoading, error } = useUser('user-123');
+ *
+ * if (isLoading) return <Spinner />;
+ * if (error) return <Error message={error.message} />;
+ *
+ * return <UserProfile user={data} />;
+ * ```
+ */
+export const useUser = (userId: string) => {
+  return useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => userService.getUser(userId),
+  });
+};
+```
+
+## Function Documentation
+
+```typescript
+/**
+ * Formats a date into a human-readable relative time string.
+ *
+ * @param date - The date to format
+ * @param options - Formatting options
+ * @returns Formatted relative time string
+ *
+ * @example
+ * ```ts
+ * formatRelativeTime(new Date()) // "just now"
+ * formatRelativeTime(yesterday) // "1 day ago"
+ * formatRelativeTime(lastWeek, { style: 'short' }) // "1w"
+ * ```
+ */
+export function formatRelativeTime(
+  date: Date,
+  options?: FormatOptions
+): string {
+  // Implementation
+}
+```
+
+## README Requirements
+
+Every feature module should have a README with:
+
+### 1. Overview
+
+```markdown
+# User Authentication
+
+This module handles user authentication including login, logout,
+token management, and session persistence.
+```
+
+### 2. Dependencies
+
+```markdown
+## Dependencies
+
+- `@tanstack/react-query` - Server state management
+- `zustand` - Client state management
+- `zod` - Schema validation
+```
+
+### 3. Usage Examples
+
+```markdown
+## Usage
+
+### Basic Login
+
+\`\`\`tsx
+import { useAuth } from '@/features/auth';
+
+const LoginPage = () => {
+  const { login, isLoading } = useAuth();
+
+  const handleSubmit = async (data: LoginData) => {
+    await login(data);
+  };
+
+  return <LoginForm onSubmit={handleSubmit} isLoading={isLoading} />;
+};
+\`\`\`
+```
+
+### 4. API Documentation
+
+```markdown
+## API
+
+### useAuth()
+
+Returns authentication state and actions.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `user` | `User \| null` | Current user |
+| `isAuthenticated` | `boolean` | Auth status |
+| `login` | `(data: LoginData) => Promise<void>` | Login function |
+| `logout` | `() => void` | Logout function |
+```
+
+### 5. File Structure
+
+```markdown
+## Structure
+
+\`\`\`
+features/auth/
+├── components/
+│   ├── LoginForm.tsx
+│   └── LogoutButton.tsx
+├── hooks/
+│   └── useAuth.ts
+├── services/
+│   └── authService.ts
+├── stores/
+│   └── authStore.ts
+├── types/
+│   └── auth.types.ts
+├── index.ts
+└── README.md
+\`\`\`
+```
+
+## When to Document
+
+| What | When |
+|------|------|
+| Public APIs | Always |
+| Complex logic | Always |
+| Workarounds | Always with reason |
+| Simple getters | Never |
+| Self-explanatory code | Never |
+
+## Code Comments
+
+```typescript
+// ✅ Good - Explains why
+// Using setTimeout to ensure DOM has updated before focusing
+setTimeout(() => inputRef.current?.focus(), 0);
+
+// ❌ Bad - Explains what (obvious from code)
+// Set loading to true
+setIsLoading(true);
+```

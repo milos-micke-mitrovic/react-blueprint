@@ -1,0 +1,246 @@
+# Accessibility Requirements
+
+WCAG 2.1 AA compliance guidelines for React applications.
+
+## Semantic HTML
+
+```tsx
+// ✅ Use semantic elements
+<nav aria-label="Main navigation">
+  <ul>
+    <li><a href="/home">Home</a></li>
+    <li><a href="/about">About</a></li>
+  </ul>
+</nav>
+
+<main>
+  <article>
+    <header>
+      <h1>Article Title</h1>
+    </header>
+    <section>
+      <h2>Section Title</h2>
+      <p>Content...</p>
+    </section>
+  </article>
+</main>
+
+<footer>
+  <p>© 2024 Company</p>
+</footer>
+```
+
+## ARIA Labels
+
+```tsx
+// Icon-only buttons need labels
+<button aria-label="Close dialog" onClick={onClose}>
+  <XIcon aria-hidden="true" />
+</button>
+
+// Describe input purpose
+<label htmlFor="email">Email</label>
+<input
+  id="email"
+  type="email"
+  aria-describedby="email-hint"
+  aria-invalid={hasError}
+  aria-errormessage={hasError ? 'email-error' : undefined}
+/>
+<span id="email-hint">We'll never share your email</span>
+{hasError && <span id="email-error" role="alert">{error}</span>}
+```
+
+## Focus Management
+
+```tsx
+// Focus trap in modals
+import { FocusTrap } from '@radix-ui/react-focus-trap';
+
+const Modal = ({ isOpen, onClose, children }) => {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus close button when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      closeButtonRef.current?.focus();
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <FocusTrap>
+      <div role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <h2 id="modal-title">Modal Title</h2>
+        {children}
+        <button ref={closeButtonRef} onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </FocusTrap>
+  );
+};
+```
+
+## Keyboard Navigation
+
+```tsx
+// Custom dropdown with keyboard support
+const Dropdown = ({ options, value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [focusIndex, setFocusIndex] = useState(0);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setFocusIndex((i) => Math.min(i + 1, options.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setFocusIndex((i) => Math.max(i - 1, 0));
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        onChange(options[focusIndex]);
+        setIsOpen(false);
+        break;
+      case 'Escape':
+        setIsOpen(false);
+        break;
+    }
+  };
+
+  return (
+    <div onKeyDown={handleKeyDown}>
+      <button
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {value}
+      </button>
+      {isOpen && (
+        <ul role="listbox">
+          {options.map((option, index) => (
+            <li
+              key={option}
+              role="option"
+              aria-selected={index === focusIndex}
+              tabIndex={index === focusIndex ? 0 : -1}
+            >
+              {option}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+```
+
+## Color Contrast
+
+```css
+/* Minimum contrast ratios (WCAG AA) */
+/* Normal text: 4.5:1 */
+/* Large text (18px+ or 14px+ bold): 3:1 */
+/* UI components: 3:1 */
+
+/* ✅ Good contrast */
+.text-primary {
+  color: #1a1a1a; /* on white: 16:1 */
+}
+
+.text-secondary {
+  color: #525252; /* on white: 7:1 */
+}
+
+/* ❌ Poor contrast */
+.text-light {
+  color: #a0a0a0; /* on white: 2.6:1 - fails */
+}
+```
+
+## Skip Links
+
+```tsx
+// Allow keyboard users to skip to main content
+const SkipLink = () => (
+  <a
+    href="#main-content"
+    className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:px-4 focus:py-2"
+  >
+    Skip to main content
+  </a>
+);
+
+const Layout = ({ children }) => (
+  <>
+    <SkipLink />
+    <Header />
+    <main id="main-content" tabIndex={-1}>
+      {children}
+    </main>
+  </>
+);
+```
+
+## Accessibility Checklist
+
+### Content
+- [ ] All images have descriptive alt text
+- [ ] Videos have captions and transcripts
+- [ ] Content is readable at 200% zoom
+- [ ] Language is declared (`<html lang="en">`)
+
+### Interaction
+- [ ] All functionality available via keyboard
+- [ ] Focus is visible and logical
+- [ ] No keyboard traps
+- [ ] Touch targets are at least 44x44px
+
+### Visual
+- [ ] Color contrast meets WCAG AA (4.5:1)
+- [ ] Information not conveyed by color alone
+- [ ] Animations respect `prefers-reduced-motion`
+- [ ] Text resizable up to 200%
+
+### Forms
+- [ ] All inputs have visible labels
+- [ ] Error messages are clear and accessible
+- [ ] Required fields are indicated
+- [ ] Form can be submitted via keyboard
+
+### Testing
+- [ ] Tested with screen reader (VoiceOver/NVDA)
+- [ ] Tested keyboard-only navigation
+- [ ] Tested with browser zoom
+- [ ] Run automated a11y tests (axe-core)
+
+## Testing Tools
+
+```bash
+# eslint-plugin-jsx-a11y
+pnpm add -D eslint-plugin-jsx-a11y
+
+# React Testing Library (queries enforce a11y)
+screen.getByRole('button', { name: /submit/i });
+
+# axe-core for automated testing
+pnpm add -D @axe-core/react
+```
+
+```typescript
+// Integrate axe in development
+import React from 'react';
+import ReactDOM from 'react-dom';
+
+if (process.env.NODE_ENV !== 'production') {
+  import('@axe-core/react').then((axe) => {
+    axe.default(React, ReactDOM, 1000);
+  });
+}
+```

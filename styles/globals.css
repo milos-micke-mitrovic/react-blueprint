@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --nextra-primary-hue: 24deg;
+  --nextra-primary-saturation: 95%;
+}
+
+/* Custom styles for the landing page */
+.hero-gradient {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 50%, #ffedd5 100%);
+}
+
+.dark .hero-gradient {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16161a 50%, #1f1f1f 100%);
+}
+
+/* Feature cards */
+.feature-card {
+  @apply rounded-xl border border-gray-200 dark:border-gray-800 p-6 transition-all duration-200;
+}
+
+.feature-card:hover {
+  @apply border-orange-300 dark:border-orange-700 shadow-lg;
+}
+
+/* Better code blocks */
+.nextra-code-block {
+  @apply my-4;
+}
+
+/* Table improvements */
+table {
+  @apply w-full;
+}
+
+th, td {
+  @apply text-left;
+}

@@ -1,0 +1,195 @@
+# Code Splitting
+
+Reduce initial bundle size with lazy loading.
+
+## Route-Based Splitting
+
+```typescript
+import { lazy, Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
+
+// Lazy load route components
+const Dashboard = lazy(() => import('@/features/dashboard'));
+const Users = lazy(() => import('@/features/users'));
+const Settings = lazy(() => import('@/features/settings'));
+
+const PageSkeleton = () => (
+  <div className="animate-pulse p-8">
+    <div className="h-8 w-48 bg-gray-200 rounded mb-4" />
+    <div className="h-64 bg-gray-200 rounded" />
+  </div>
+);
+
+const AppRoutes = () => (
+  <Suspense fallback={<PageSkeleton />}>
+    <Routes>
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/users/*" element={<Users />} />
+      <Route path="/settings" element={<Settings />} />
+    </Routes>
+  </Suspense>
+);
+```
+
+## Component-Level Splitting
+
+```typescript
+const HeavyChart = lazy(() => import('./HeavyChart'));
+const DataExporter = lazy(() => import('./DataExporter'));
+
+const Dashboard = () => {
+  const [showExporter, setShowExporter] = useState(false);
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+
+      {/* Load chart when visible */}
+      <Suspense fallback={<ChartSkeleton />}>
+        <HeavyChart data={chartData} />
+      </Suspense>
+
+      {/* Load exporter on demand */}
+      <button onClick={() => setShowExporter(true)}>
+        Export Data
+      </button>
+
+      {showExporter && (
+        <Suspense fallback={<Spinner />}>
+          <DataExporter />
+        </Suspense>
+      )}
+    </div>
+  );
+};
+```
+
+## Named Exports with Lazy
+
+```typescript
+// For named exports, use intermediate module
+// features/users/index.ts
+export { UserList } from './components/UserList';
+export { UserProfile } from './components/UserProfile';
+
+// Lazy load
+const Users = lazy(() =>
+  import('@/features/users').then((module) => ({
+    default: module.UserList,
+  }))
+);
+```
+
+## Preloading
+
+```typescript
+// Preload on hover
+const UserLink = ({ userId }: { userId: string }) => {
+  const preloadProfile = () => {
+    import('@/features/users/UserProfile');
+  };
+
+  return (
+    <Link
+      to={`/users/${userId}`}
+      onMouseEnter={preloadProfile}
+    >
+      View Profile
+    </Link>
+  );
+};
+
+// Preload after initial load
+useEffect(() => {
+  // Preload likely next routes
+  const timer = setTimeout(() => {
+    import('@/features/settings');
+  }, 2000);
+
+  return () => clearTimeout(timer);
+}, []);
+```
+
+## Vite Configuration
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+          'query-vendor': ['@tanstack/react-query'],
+        },
+      },
+    },
+    // Chunk size warning
+    chunkSizeWarningLimit: 500,
+  },
+});
+```
+
+## Bundle Analysis
+
+```bash
+# Install analyzer
+pnpm add -D rollup-plugin-visualizer
+
+# Add to vite.config.ts
+import { visualizer } from 'rollup-plugin-visualizer';
+
+export default defineConfig({
+  plugins: [
+    visualizer({
+      filename: 'stats.html',
+      open: true,
+    }),
+  ],
+});
+
+# Build and analyze
+pnpm build
+```
+
+## Loading States
+
+```typescript
+// Skeleton components for each feature
+const DashboardSkeleton = () => (
+  <div className="animate-pulse space-y-4">
+    <div className="h-8 w-64 bg-gray-200 rounded" />
+    <div className="grid grid-cols-3 gap-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="h-32 bg-gray-200 rounded" />
+      ))}
+    </div>
+  </div>
+);
+
+// Use specific skeletons
+<Suspense fallback={<DashboardSkeleton />}>
+  <Dashboard />
+</Suspense>
+```
+
+## Error Handling
+
+```typescript
+import { ErrorBoundary } from 'react-error-boundary';
+
+const LazyComponent = lazy(() => import('./HeavyComponent'));
+
+<ErrorBoundary
+  fallback={<div>Failed to load component</div>}
+  onError={(error) => console.error('Lazy load failed:', error)}
+>
+  <Suspense fallback={<Skeleton />}>
+    <LazyComponent />
+  </Suspense>
+</ErrorBoundary>
+```

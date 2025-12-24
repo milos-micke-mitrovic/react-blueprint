@@ -1,0 +1,109 @@
+# Project Structure
+
+A scalable directory layout for React applications.
+
+## Directory Layout
+
+```
+src/
+├── app/                    # Application layer
+│   ├── providers/          # Context providers
+│   ├── router/             # Route configuration
+│   └── App.tsx
+│
+├── components/             # Shared components
+│   ├── ui/                 # Base UI (buttons, inputs)
+│   ├── layout/             # Header, Sidebar, Footer
+│   └── common/             # DataTable, Modal, ErrorBoundary
+│
+├── features/               # Feature modules
+│   ├── auth/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   ├── stores/
+│   │   ├── types/
+│   │   └── index.ts
+│   └── users/
+│
+├── hooks/                  # Global custom hooks
+├── lib/                    # Third-party configs
+├── services/               # Global API services
+├── stores/                 # Global state stores
+├── types/                  # Global TypeScript types
+├── utils/                  # Utility functions
+├── constants/              # App constants
+├── assets/                 # Static assets
+├── styles/                 # Global styles
+└── main.tsx
+```
+
+## Structure Rules
+
+### 1. Feature Isolation
+Each feature module is self-contained with its own components, hooks, services, stores, and types.
+
+```
+features/auth/
+├── components/
+│   ├── LoginForm.tsx
+│   └── SignupForm.tsx
+├── hooks/
+│   └── useAuth.ts
+├── services/
+│   └── authService.ts
+├── stores/
+│   └── authStore.ts
+├── types/
+│   └── auth.types.ts
+└── index.ts              # Public API
+```
+
+### 2. Public API Pattern
+Export through `index.ts` to control what's exposed:
+
+```typescript
+// features/auth/index.ts
+export { LoginForm } from './components/LoginForm';
+export { useAuth } from './hooks/useAuth';
+export type { User, AuthState } from './types/auth.types';
+```
+
+### 3. Colocation
+Keep tests and styles next to components:
+
+```
+components/
+├── Button/
+│   ├── Button.tsx
+│   ├── Button.test.tsx
+│   ├── Button.stories.tsx
+│   └── index.ts
+```
+
+### 4. No Circular Dependencies
+Use dependency analysis tools to detect and prevent circular imports.
+
+### 5. Maximum Nesting
+Limit directory nesting to 4 levels to maintain navigability.
+
+## Import Aliases
+
+Configure path aliases for cleaner imports:
+
+```typescript
+// tsconfig.json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+Use imports like:
+```typescript
+import { Button } from '@/components/ui';
+import { useAuth } from '@/features/auth';
+```

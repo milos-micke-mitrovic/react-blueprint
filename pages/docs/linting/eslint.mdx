@@ -1,0 +1,168 @@
+# ESLint Configuration
+
+Code quality and consistency with ESLint.
+
+## Configuration
+
+```javascript
+// eslint.config.js
+import js from '@eslint/js';
+import typescript from '@typescript-eslint/eslint-plugin';
+import typescriptParser from '@typescript-eslint/parser';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import importPlugin from 'eslint-plugin-import';
+
+export default [
+  js.configs.recommended,
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    plugins: {
+      '@typescript-eslint': typescript,
+      react,
+      'react-hooks': reactHooks,
+      import: importPlugin,
+    },
+    rules: {
+      // TypeScript
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports' },
+      ],
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+
+      // React
+      'react/jsx-no-useless-fragment': 'error',
+      'react/self-closing-comp': 'error',
+      'react/jsx-curly-brace-presence': [
+        'error',
+        { props: 'never', children: 'never' },
+      ],
+      'react/jsx-boolean-value': ['error', 'never'],
+
+      // React Hooks
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+
+      // Imports
+      'import/order': [
+        'error',
+        {
+          groups: [
+            'builtin',
+            'external',
+            'internal',
+            'parent',
+            'sibling',
+            'index',
+          ],
+          'newlines-between': 'always',
+          alphabetize: { order: 'asc' },
+        },
+      ],
+      'import/no-duplicates': 'error',
+
+      // General
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'prefer-const': 'error',
+      'no-var': 'error',
+    },
+    settings: {
+      react: { version: 'detect' },
+    },
+  },
+];
+```
+
+## Key Rules Explained
+
+### TypeScript Rules
+
+| Rule | Purpose |
+|------|---------|
+| `no-explicit-any` | Prevents `any` type usage |
+| `consistent-type-imports` | Enforces `import type` syntax |
+| `no-unused-vars` | Catches unused variables |
+
+### React Rules
+
+| Rule | Purpose |
+|------|---------|
+| `jsx-no-useless-fragment` | Removes unnecessary `<></>` |
+| `self-closing-comp` | `<Component />` not `<Component></Component>` |
+| `rules-of-hooks` | Validates hook usage |
+| `exhaustive-deps` | Validates effect dependencies |
+
+### Import Rules
+
+| Rule | Purpose |
+|------|---------|
+| `import/order` | Consistent import ordering |
+| `no-duplicates` | No duplicate imports |
+
+## Scripts
+
+```json
+{
+  "scripts": {
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix"
+  }
+}
+```
+
+## VSCode Integration
+
+```json
+// .vscode/settings.json
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ]
+}
+```
+
+## Ignore Patterns
+
+```
+// .eslintignore
+node_modules/
+dist/
+build/
+coverage/
+*.config.js
+*.config.ts
+```
+
+## Pre-commit Hook
+
+```json
+// package.json
+{
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}
+```
