@@ -48,7 +48,7 @@ const config: DocsThemeConfig = {
     text: null,
   },
   footer: {
-    text: `© ${new Date().getFullYear()} ReactBlueprint. MIT License.`,
+    text: '© 2026 ReactBlueprint. MIT License.',
   },
   main: ({ children }) => (
     <>
