@@ -33,10 +33,7 @@ Absolutely. The principles apply regardless of specific libraries. For example:
 
 ### When should I use Zustand vs Context?
 
-<Callout type="info">
-  **Zustand** for frequently changing global state (auth, UI state).
-  **Context** for rarely changing values (theme, locale, feature flags).
-</Callout>
+<Callout type="info"><strong>Zustand</strong> for frequently changing global state (auth, UI state). <strong>Context</strong> for rarely changing values (theme, locale, feature flags).</Callout>
 
 Context causes all consumers to re-render when the value changes. Zustand only re-renders components that select the changed value.
 

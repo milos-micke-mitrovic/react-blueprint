@@ -6,8 +6,5 @@
       "layout": "raw"
     }
   },
-  "docs": {
-    "title": "Documentation",
-    "type": "page"
-  }
+  "docs": "Documentation"
 }

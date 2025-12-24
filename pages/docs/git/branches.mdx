@@ -5,38 +5,45 @@ Consistent Git branch naming conventions.
 ## Convention
 
 ```
-<type>/<ticket-id>-<short-description>
+<type>/<description>
+<type>/<ticket-id>-<description>
 ```
+
+Ticket ID is optional — include it if your team uses an issue tracker.
 
 ## Branch Types
 
 | Type | Purpose | Example |
 |------|---------|---------|
-| `feature/` | New features | `feature/PROJ-123-user-auth` |
-| `bugfix/` | Bug fixes | `bugfix/PROJ-456-fix-login` |
-| `hotfix/` | Urgent production fixes | `hotfix/PROJ-789-security-patch` |
-| `refactor/` | Code refactoring | `refactor/PROJ-101-cleanup-api` |
-| `docs/` | Documentation | `docs/PROJ-202-api-docs` |
-| `test/` | Test additions | `test/PROJ-303-add-unit-tests` |
-| `chore/` | Maintenance tasks | `chore/PROJ-404-update-deps` |
+| `feature/` | New features | `feature/user-authentication` |
+| `bugfix/` | Bug fixes | `bugfix/fix-login-redirect` |
+| `hotfix/` | Urgent production fixes | `hotfix/security-patch` |
+| `refactor/` | Code refactoring | `refactor/cleanup-api` |
+| `docs/` | Documentation | `docs/api-docs` |
+| `test/` | Test additions | `test/add-unit-tests` |
+| `chore/` | Maintenance tasks | `chore/update-deps` |
 
 ## Examples
 
 ```bash
-# Good
+# Good - without tickets
+feature/user-authentication
+bugfix/fix-login-redirect
+hotfix/critical-security-fix
+refactor/simplify-user-service
+chore/upgrade-react-18
+
+# Good - with tickets (if using issue tracker)
 feature/PROJ-123-user-authentication
 bugfix/PROJ-456-fix-login-redirect
 hotfix/PROJ-789-critical-security-fix
-refactor/PROJ-101-simplify-user-service
-docs/PROJ-202-update-readme
-chore/PROJ-303-upgrade-react-18
 
 # Bad
-feature/new-stuff           # No ticket, vague
+feature/new-stuff           # Vague description
 john/working               # Personal name
-fix                        # Too short
+fix                        # Too short, no type
 PROJ-123                   # No type or description
-feature/PROJ-123-implement-the-new-user-authentication-system-with-oauth
+feature/implement-the-new-user-authentication-system-with-oauth
   # Too long
 ```
 
@@ -44,7 +51,7 @@ feature/PROJ-123-implement-the-new-user-authentication-system-with-oauth
 
 1. **Always lowercase** — No capital letters in branch names
 2. **Use hyphens** — Not underscores or camelCase
-3. **Include ticket ID** — Link to issue tracker
+3. **Include ticket ID** — Optional, but recommended if using issue tracker
 4. **Keep it short** — Max 50 characters for description
 5. **Be descriptive** — Clear purpose at a glance
 
@@ -62,24 +69,24 @@ feature/PROJ-123-implement-the-new-user-authentication-system-with-oauth
 # Create feature branch from develop
 git checkout develop
 git pull origin develop
-git checkout -b feature/PROJ-123-user-auth
+git checkout -b feature/user-auth
 
 # Work on feature...
 git add .
 git commit -m "feat(auth): add login form"
 
 # Push and create PR
-git push -u origin feature/PROJ-123-user-auth
+git push -u origin feature/user-auth
 ```
 
 ## Branch Cleanup
 
 ```bash
 # Delete local branch after merge
-git branch -d feature/PROJ-123-user-auth
+git branch -d feature/user-auth
 
 # Delete remote branch
-git push origin --delete feature/PROJ-123-user-auth
+git push origin --delete feature/user-auth
 
 # Prune deleted remote branches
 git fetch --prune

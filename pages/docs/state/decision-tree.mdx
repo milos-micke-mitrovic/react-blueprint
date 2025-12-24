@@ -4,9 +4,7 @@ When to use what for managing state in your React application.
 
 import { Callout, Cards, Card } from 'nextra/components'
 
-<Callout type="info">
-  **Golden Rule:** Server data → TanStack Query, Global client state → Zustand, Local UI → useState
-</Callout>
+<Callout type="info"><strong>Golden Rule:</strong> Server data → TanStack Query, Global client state → Zustand, Local UI → useState</Callout>
 
 ## Decision Tree
 
@@ -27,18 +25,10 @@ Is state needed by a single component?
 ## Quick Reference
 
 <Cards>
-  <Card title="useState" href="/docs/state/decision-tree#local-component-state">
-    Component UI: modals, inputs, toggles
-  </Card>
-  <Card title="useReducer" href="/docs/state/decision-tree#complex-local-state">
-    Complex local: multi-step forms, state machines
-  </Card>
-  <Card title="TanStack Query" href="/docs/state/tanstack-query">
-    Server data: API responses, caching
-  </Card>
-  <Card title="Zustand" href="/docs/state/zustand">
-    Global client: auth, UI preferences
-  </Card>
+  <Card title="useState" href="/docs/state/decision-tree#local-component-state" />
+  <Card title="useReducer" href="/docs/state/decision-tree#complex-local-state" />
+  <Card title="TanStack Query" href="/docs/state/tanstack-query" />
+  <Card title="Zustand" href="/docs/state/zustand" />
 </Cards>
 
 | State Type | Solution | Example |
@@ -128,9 +118,7 @@ const Sidebar = () => {
 
 ## Anti-Patterns to Avoid
 
-<Callout type="error" emoji="❌">
-  **Don't store server data in Zustand.** Use TanStack Query for automatic caching, refetching, and deduplication.
-</Callout>
+<Callout type="error" emoji="❌"><strong>Don't store server data in Zustand.</strong> Use TanStack Query for automatic caching, refetching, and deduplication.</Callout>
 
 ### Don't Store Server Data in Zustand
 
@@ -151,9 +139,7 @@ const useUsers = () => useQuery({
 });
 ```
 
-<Callout type="warning">
-  **Don't duplicate state.** Derive values from source of truth using `useMemo`.
-</Callout>
+<Callout type="warning"><strong>Don't duplicate state.</strong> Derive values from source of truth using <code>useMemo</code>.</Callout>
 
 ### Don't Duplicate State
 
