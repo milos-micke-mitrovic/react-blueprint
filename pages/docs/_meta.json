@@ -1,4 +1,15 @@
 {
+  "---": {
+    "type": "separator",
+    "title": "Overview"
+  },
+  "quick-reference": "Quick Reference",
+  "examples": "Examples",
+  "faq": "FAQ",
+  "----": {
+    "type": "separator",
+    "title": "Guide"
+  },
   "getting-started": "Getting Started",
   "naming": "Naming Conventions",
   "components": "Components",

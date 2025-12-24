@@ -2,64 +2,78 @@
 
 A scalable directory layout for React applications.
 
+import { Callout, FileTree, Steps } from 'nextra/components'
+
 ## Directory Layout
 
-```
-src/
-├── app/                    # Application layer
-│   ├── providers/          # Context providers
-│   ├── router/             # Route configuration
-│   └── App.tsx
-│
-├── components/             # Shared components
-│   ├── ui/                 # Base UI (buttons, inputs)
-│   ├── layout/             # Header, Sidebar, Footer
-│   └── common/             # DataTable, Modal, ErrorBoundary
-│
-├── features/               # Feature modules
-│   ├── auth/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── services/
-│   │   ├── stores/
-│   │   ├── types/
-│   │   └── index.ts
-│   └── users/
-│
-├── hooks/                  # Global custom hooks
-├── lib/                    # Third-party configs
-├── services/               # Global API services
-├── stores/                 # Global state stores
-├── types/                  # Global TypeScript types
-├── utils/                  # Utility functions
-├── constants/              # App constants
-├── assets/                 # Static assets
-├── styles/                 # Global styles
-└── main.tsx
-```
+<FileTree>
+  <FileTree.Folder name="src" defaultOpen>
+    <FileTree.Folder name="app">
+      <FileTree.Folder name="providers" />
+      <FileTree.Folder name="router" />
+      <FileTree.File name="App.tsx" />
+    </FileTree.Folder>
+    <FileTree.Folder name="components">
+      <FileTree.Folder name="ui" />
+      <FileTree.Folder name="layout" />
+      <FileTree.Folder name="common" />
+    </FileTree.Folder>
+    <FileTree.Folder name="features" defaultOpen>
+      <FileTree.Folder name="auth">
+        <FileTree.Folder name="components" />
+        <FileTree.Folder name="hooks" />
+        <FileTree.Folder name="services" />
+        <FileTree.Folder name="stores" />
+        <FileTree.Folder name="types" />
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="users" />
+    </FileTree.Folder>
+    <FileTree.Folder name="hooks" />
+    <FileTree.Folder name="lib" />
+    <FileTree.Folder name="services" />
+    <FileTree.Folder name="stores" />
+    <FileTree.Folder name="types" />
+    <FileTree.Folder name="utils" />
+    <FileTree.Folder name="constants" />
+    <FileTree.Folder name="assets" />
+    <FileTree.Folder name="styles" />
+    <FileTree.File name="main.tsx" />
+  </FileTree.Folder>
+</FileTree>
 
 ## Structure Rules
 
-### 1. Feature Isolation
+<Steps>
+
+### Feature Isolation
+
 Each feature module is self-contained with its own components, hooks, services, stores, and types.
 
-```
-features/auth/
-├── components/
-│   ├── LoginForm.tsx
-│   └── SignupForm.tsx
-├── hooks/
-│   └── useAuth.ts
-├── services/
-│   └── authService.ts
-├── stores/
-│   └── authStore.ts
-├── types/
-│   └── auth.types.ts
-└── index.ts              # Public API
-```
+<FileTree>
+  <FileTree.Folder name="features/auth" defaultOpen>
+    <FileTree.Folder name="components" defaultOpen>
+      <FileTree.File name="LoginForm.tsx" />
+      <FileTree.File name="SignupForm.tsx" />
+    </FileTree.Folder>
+    <FileTree.Folder name="hooks">
+      <FileTree.File name="useAuth.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="services">
+      <FileTree.File name="authService.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="stores">
+      <FileTree.File name="authStore.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="types">
+      <FileTree.File name="auth.types.ts" />
+    </FileTree.Folder>
+    <FileTree.File name="index.ts" />
+  </FileTree.Folder>
+</FileTree>
 
-### 2. Public API Pattern
+### Public API Pattern
+
 Export through `index.ts` to control what's exposed:
 
 ```typescript
@@ -69,23 +83,36 @@ export { useAuth } from './hooks/useAuth';
 export type { User, AuthState } from './types/auth.types';
 ```
 
-### 3. Colocation
+<Callout type="info">
+  This pattern allows you to refactor internal file structure without breaking imports elsewhere.
+</Callout>
+
+### Colocation
+
 Keep tests and styles next to components:
 
-```
-components/
-├── Button/
-│   ├── Button.tsx
-│   ├── Button.test.tsx
-│   ├── Button.stories.tsx
-│   └── index.ts
-```
+<FileTree>
+  <FileTree.Folder name="components/Button" defaultOpen>
+    <FileTree.File name="Button.tsx" />
+    <FileTree.File name="Button.test.tsx" />
+    <FileTree.File name="Button.stories.tsx" />
+    <FileTree.File name="index.ts" />
+  </FileTree.Folder>
+</FileTree>
 
-### 4. No Circular Dependencies
+### No Circular Dependencies
+
 Use dependency analysis tools to detect and prevent circular imports.
 
-### 5. Maximum Nesting
+<Callout type="warning">
+  Circular dependencies cause bugs and make refactoring difficult. Use tools like `madge` to detect them.
+</Callout>
+
+### Maximum Nesting
+
 Limit directory nesting to 4 levels to maintain navigability.
+
+</Steps>
 
 ## Import Aliases
 

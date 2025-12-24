@@ -1,0 +1,205 @@
+# Quick Reference
+
+All conventions and patterns at a glance.
+
+import { Tabs, Tab, Callout } from 'nextra/components'
+
+## Naming Conventions
+
+<Tabs items={['Files', 'Code', 'Git']}>
+  <Tab>
+    | Type | Convention | Example |
+    |------|------------|---------|
+    | Components | PascalCase | `UserProfile.tsx` |
+    | Hooks | camelCase + `use` | `useUserData.ts` |
+    | Utilities | camelCase | `formatDate.ts` |
+    | Types | camelCase + `.types` | `user.types.ts` |
+    | Stores | camelCase + `Store` | `authStore.ts` |
+    | Services | camelCase + `Service` | `userService.ts` |
+    | Tests | `.test` suffix | `Button.test.tsx` |
+  </Tab>
+  <Tab>
+    ```typescript
+    // Components - PascalCase
+    const UserCard: React.FC<Props> = () => {};
+
+    // Hooks - camelCase with 'use'
+    const useAuth = () => {};
+
+    // Handlers - 'handle' prefix
+    const handleSubmit = () => {};
+
+    // Booleans - is/has/should prefix
+    const isLoading = true;
+
+    // Constants - SCREAMING_SNAKE_CASE
+    const API_URL = 'https://api.example.com';
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    # Branches
+    feature/PROJ-123-user-auth
+    bugfix/PROJ-456-fix-login
+    hotfix/PROJ-789-security
+
+    # Commits
+    feat(auth): add login form
+    fix(users): resolve infinite loop
+    docs(readme): update instructions
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Component Structure
+
+```typescript
+import { memo, type FC } from 'react';
+
+interface Props {
+  title: string;
+  onAction?: () => void;
+}
+
+export const Component: FC<Props> = memo(({ title, onAction }) => {
+  // 1. Hooks
+  const [state, setState] = useState(false);
+
+  // 2. Derived state
+  const derived = useMemo(() => compute(state), [state]);
+
+  // 3. Handlers
+  const handleClick = useCallback(() => {
+    onAction?.();
+  }, [onAction]);
+
+  // 4. Early returns
+  if (!title) return null;
+
+  // 5. Render
+  return <div onClick={handleClick}>{title}</div>;
+});
+```
+
+---
+
+## State Management
+
+<Callout type="info">
+  **Rule of thumb:** Server data → TanStack Query, Client state → Zustand, Local UI → useState
+</Callout>
+
+| State Type | Solution |
+|------------|----------|
+| Component UI | `useState` |
+| Complex local | `useReducer` |
+| Form data | React Hook Form |
+| Server data | TanStack Query |
+| Global UI | Zustand |
+| Auth | Zustand + persist |
+
+---
+
+## TanStack Query
+
+```typescript
+// Query
+const { data, isLoading } = useQuery({
+  queryKey: ['users', id],
+  queryFn: () => api.getUser(id),
+});
+
+// Mutation
+const { mutate } = useMutation({
+  mutationFn: api.createUser,
+  onSuccess: () => queryClient.invalidateQueries(['users']),
+});
+```
+
+---
+
+## Zustand Store
+
+```typescript
+const useStore = create<State & Actions>((set) => ({
+  count: 0,
+  increment: () => set((s) => ({ count: s.count + 1 })),
+}));
+
+// Always use selectors
+const count = useStore((s) => s.count);
+```
+
+---
+
+## TypeScript
+
+```typescript
+// Prefer interfaces for objects
+interface User {
+  id: string;
+  name: string;
+}
+
+// Use types for unions
+type Status = 'idle' | 'loading' | 'error';
+
+// Type guards over assertions
+function isUser(val: unknown): val is User {
+  return typeof val === 'object' && val !== null && 'id' in val;
+}
+```
+
+---
+
+## Testing
+
+```typescript
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+it('handles click', async () => {
+  const onClick = vi.fn();
+  render(<Button onClick={onClick}>Click</Button>);
+
+  await userEvent.click(screen.getByRole('button'));
+
+  expect(onClick).toHaveBeenCalled();
+});
+```
+
+---
+
+## Tailwind Class Order
+
+```
+Layout → Sizing → Spacing → Typography → Colors → Effects → States
+```
+
+```tsx
+<div className="flex items-center w-full p-4 text-sm text-gray-900 bg-white rounded-lg hover:bg-gray-50">
+```
+
+---
+
+## Coverage Targets
+
+| Metric | Target |
+|--------|--------|
+| Statements | 80% |
+| Branches | 75% |
+| Functions | 80% |
+| Lines | 80% |
+
+---
+
+## Performance Checklist
+
+- [ ] Main bundle < 200KB gzipped
+- [ ] Lazy load routes with `React.lazy`
+- [ ] Virtualize lists with 100+ items
+- [ ] Memoize expensive components with `memo`
+- [ ] Debounce user inputs
+- [ ] Use `useMemo` for expensive calculations
