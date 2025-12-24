@@ -39,9 +39,9 @@ import { Tabs, Tab, Callout } from 'nextra/components'
   <Tab>
     ```bash
     # Branches
-    feature/PROJ-123-user-auth
-    bugfix/PROJ-456-fix-login
-    hotfix/PROJ-789-security
+    feature/user-auth
+    bugfix/fix-login
+    hotfix/security-patch
 
     # Commits
     feat(auth): add login form
@@ -87,9 +87,7 @@ export const Component: FC<Props> = memo(({ title, onAction }) => {
 
 ## State Management
 
-<Callout type="info">
-  **Rule of thumb:** Server data → TanStack Query, Client state → Zustand, Local UI → useState
-</Callout>
+<Callout type="info"><strong>Rule of thumb:</strong> Server data → TanStack Query, Client state → Zustand, Local UI → useState</Callout>
 
 | State Type | Solution |
 |------------|----------|

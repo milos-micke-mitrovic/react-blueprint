@@ -1,16 +1,34 @@
 import { useRouter } from 'next/router';
 import { DocsThemeConfig, useConfig } from 'nextra-theme-docs';
+import { useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
+
+// Fix search scroll issue
+const useFixSearchScroll = () => {
+  useEffect(() => {
+    const searchInput = document.querySelector('.nextra-search input');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const scrollY = window.scrollY;
+        requestAnimationFrame(() => {
+          window.scrollTo(0, scrollY);
+        });
+      });
+    }
+  }, []);
+};
 
 const config: DocsThemeConfig = {
   logo: (
-    <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>
-      🧱 ReactBlueprint
-    </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <img src="/logo.svg" alt="" height={28} width={28} />
+      <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>ReactBlueprint</span>
+    </div>
   ),
   project: {
-    link: 'https://github.com/reactblueprint/reactblueprint',
+    link: 'https://github.com/milos-micke-mitrovic/react-blueprint',
   },
-  docsRepositoryBase: 'https://github.com/reactblueprint/reactblueprint/tree/main',
+  docsRepositoryBase: 'https://github.com/milos-micke-mitrovic/react-blueprint/tree/main',
   primaryHue: 24,
   primarySaturation: 95,
   sidebar: {
@@ -19,6 +37,9 @@ const config: DocsThemeConfig = {
   },
   toc: {
     float: true,
+  },
+  search: {
+    placeholder: 'Search documentation...',
   },
   feedback: {
     content: null,
@@ -29,6 +50,12 @@ const config: DocsThemeConfig = {
   footer: {
     text: `© ${new Date().getFullYear()} ReactBlueprint. MIT License.`,
   },
+  main: ({ children }) => (
+    <>
+      {children}
+      <Analytics />
+    </>
+  ),
   useNextSeoProps() {
     const { asPath } = useRouter();
     if (asPath === '/') {
@@ -43,6 +70,7 @@ const config: DocsThemeConfig = {
   head: function Head() {
     const { asPath } = useRouter();
     const { frontMatter, title } = useConfig();
+    useFixSearchScroll();
 
     const url = `https://reactblueprint.dev${asPath}`;
     const description = frontMatter.description || 'Modern React patterns and conventions for scalable applications';
@@ -58,19 +86,18 @@ const config: DocsThemeConfig = {
         <meta property="og:type" content="website" />
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={description} />
-        <meta property="og:image" content="https://reactblueprint.dev/og-image.png" />
+        <meta property="og:image" content="https://reactblueprint.dev/logo.png" />
         <meta property="og:site_name" content="ReactBlueprint" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={ogTitle} />
         <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content="https://reactblueprint.dev/og-image.png" />
+        <meta name="twitter:image" content="https://reactblueprint.dev/logo.png" />
 
-        {/* Favicon */}
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        {/* Favicon - SVG primary, PNG fallback */}
+        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+        <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         {/* Theme color */}

@@ -7,6 +7,20 @@
   --nextra-primary-saturation: 95%;
 }
 
+/* Keep scrollbar always visible to prevent layout shift */
+html {
+  overflow-y: scroll;
+}
+
+/* Prevent search dropdown from causing scroll jumps */
+.nextra-search ul {
+  min-height: 100px;
+}
+
+.nextra-search .nx-fixed.nx-inset-0 {
+  pointer-events: none;
+}
+
 /* Custom styles for the landing page */
 .hero-gradient {
   background: linear-gradient(135deg, #fff7ed 0%, #ffffff 50%, #ffedd5 100%);
