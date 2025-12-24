@@ -1,0 +1,214 @@
+---
+description: Currency formatting utilities with Intl.NumberFormat for consistent money display.
+---
+
+# Currency Formatting
+
+Utilities for formatting currency values using native Intl API.
+
+## Code
+
+```typescript
+// lib/formatters.ts
+
+/**
+ * Format a number as currency
+ */
+export function formatCurrency(
+  amount: number,
+  currency: string = 'USD',
+  locale: string = 'en-US'
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+  }).format(amount);
+}
+
+/**
+ * Format a number as compact currency (e.g., $1.2K, $3.5M)
+ */
+export function formatCompactCurrency(
+  amount: number,
+  currency: string = 'USD',
+  locale: string = 'en-US'
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    compactDisplay: 'short',
+  }).format(amount);
+}
+
+/**
+ * Format a number as currency without cents
+ */
+export function formatWholeCurrency(
+  amount: number,
+  currency: string = 'USD',
+  locale: string = 'en-US'
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/**
+ * Parse a currency string back to number
+ */
+export function parseCurrency(value: string): number {
+  // Remove currency symbols and non-numeric characters except decimal
+  const cleaned = value.replace(/[^0-9.-]/g, '');
+  return parseFloat(cleaned) || 0;
+}
+
+/**
+ * Format cents to dollars
+ */
+export function formatCentsAsDollars(
+  cents: number,
+  currency: string = 'USD'
+): string {
+  return formatCurrency(cents / 100, currency);
+}
+```
+
+## Usage
+
+### Basic Formatting
+
+```tsx
+import { formatCurrency, formatCompactCurrency } from '@/lib/formatters';
+
+formatCurrency(1234.56);           // "$1,234.56"
+formatCurrency(1234.56, 'EUR');    // "€1,234.56"
+formatCurrency(1234.56, 'GBP');    // "£1,234.56"
+formatCurrency(1234.56, 'JPY');    // "¥1,235" (no decimals for Yen)
+
+formatCompactCurrency(1200);       // "$1.2K"
+formatCompactCurrency(1500000);    // "$1.5M"
+formatCompactCurrency(2500000000); // "$2.5B"
+```
+
+### In Components
+
+```tsx
+function PriceDisplay({ price, currency = 'USD' }) {
+  return (
+    <span className="text-2xl font-bold">
+      {formatCurrency(price, currency)}
+    </span>
+  );
+}
+
+function ProductCard({ product }) {
+  const hasDiscount = product.salePrice < product.price;
+
+  return (
+    <div>
+      <h3>{product.name}</h3>
+      <div className="flex items-center gap-2">
+        <span className={hasDiscount ? 'text-red-500' : ''}>
+          {formatCurrency(product.salePrice)}
+        </span>
+        {hasDiscount && (
+          <span className="text-muted-foreground line-through">
+            {formatCurrency(product.price)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+### Dashboard Stats
+
+```tsx
+function StatCard({ label, value }) {
+  return (
+    <div className="rounded-lg border p-4">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-2xl font-bold">
+        {formatCompactCurrency(value)}
+      </p>
+    </div>
+  );
+}
+
+// Usage
+<StatCard label="Revenue" value={1234567} />
+// Shows: $1.2M
+```
+
+### Input with Currency Formatting
+
+```tsx
+function CurrencyInput({ value, onChange }) {
+  const [displayValue, setDisplayValue] = useState(
+    value ? formatCurrency(value) : ''
+  );
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const parsed = parseCurrency(raw);
+    onChange(parsed);
+    setDisplayValue(raw);
+  };
+
+  const handleBlur = () => {
+    if (value) {
+      setDisplayValue(formatCurrency(value));
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={displayValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      placeholder="$0.00"
+    />
+  );
+}
+```
+
+## Number Formatting
+
+Related utilities for general number formatting:
+
+```typescript
+/**
+ * Format a number with thousands separators
+ */
+export function formatNumber(
+  value: number,
+  locale: string = 'en-US'
+): string {
+  return new Intl.NumberFormat(locale).format(value);
+}
+
+/**
+ * Format a number as percentage
+ */
+export function formatPercent(
+  value: number,
+  decimals: number = 0
+): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'percent',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+}
+
+// Usage
+formatNumber(1234567);    // "1,234,567"
+formatPercent(0.156);     // "16%"
+formatPercent(0.156, 1);  // "15.6%"
+```

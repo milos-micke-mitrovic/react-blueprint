@@ -1,0 +1,357 @@
+---
+description: Guide to deploying your Capacitor React app to the iOS App Store and Google Play Store.
+---
+
+# App Store Deployment
+
+Deploy your app to the iOS App Store and Google Play Store.
+
+import { Callout, Steps, Tabs, Tab } from 'nextra/components'
+
+## Prerequisites
+
+| Platform | Requirements | Cost |
+|----------|--------------|------|
+| iOS | macOS, Xcode 14+, Apple Developer Account | $99/year |
+| Android | Android Studio, JDK 17+ | $25 one-time |
+
+## iOS Deployment
+
+<Steps>
+
+### Prepare Your App
+
+1. Update app version in Xcode
+2. Set bundle identifier to match your Apple Developer account
+3. Configure app icons and launch screen
+
+```bash
+# Build production
+npm run build
+npx cap sync ios
+npx cap open ios
+```
+
+### Configure Signing
+
+In Xcode:
+1. Select your project in the navigator
+2. Select your app target
+3. Go to "Signing & Capabilities"
+4. Select your team
+5. Let Xcode manage signing automatically
+
+### App Icons
+
+Create app icons in all required sizes. Use a 1024x1024 PNG and tools like:
+- [App Icon Generator](https://appicon.co/)
+- [Icon Kitchen](https://icon.kitchen/)
+
+Place icons in `ios/App/App/Assets.xcassets/AppIcon.appiconset/`
+
+### Create Archive
+
+1. In Xcode, select "Any iOS Device" as build target
+2. Product → Archive
+3. Wait for archive to complete
+4. Organizer window opens automatically
+
+### Upload to App Store Connect
+
+1. In Organizer, select your archive
+2. Click "Distribute App"
+3. Choose "App Store Connect"
+4. Follow the wizard
+5. Upload completes to App Store Connect
+
+### App Store Connect
+
+1. Go to [App Store Connect](https://appstoreconnect.apple.com)
+2. Create new app or select existing
+3. Fill in app information:
+   - Description
+   - Keywords
+   - Screenshots
+   - Privacy policy URL
+4. Select your build
+5. Submit for review
+
+</Steps>
+
+### iOS Checklist
+
+- [ ] App icon (1024x1024 for App Store, all sizes for app)
+- [ ] Launch screen configured
+- [ ] Privacy policy URL
+- [ ] App description and keywords
+- [ ] Screenshots for all required device sizes
+- [ ] Contact information
+- [ ] Age rating questionnaire completed
+- [ ] In-app purchases configured (if applicable)
+- [ ] Privacy nutrition labels
+
+<Callout type="warning">Apple review typically takes 24-48 hours. First submissions may take longer. Ensure your app follows Apple's Human Interface Guidelines.</Callout>
+
+## Android Deployment
+
+<Steps>
+
+### Prepare Your App
+
+```bash
+# Build production
+npm run build
+npx cap sync android
+npx cap open android
+```
+
+### Configure App
+
+In `android/app/build.gradle`:
+
+```groovy
+android {
+    defaultConfig {
+        applicationId "com.mycompany.myapp"
+        versionCode 1       // Increment for each release
+        versionName "1.0.0"
+        minSdkVersion 22
+        targetSdkVersion 34
+    }
+}
+```
+
+### Create Signing Key
+
+First-time setup - create a keystore:
+
+```bash
+keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key-alias
+```
+
+<Callout type="error">Keep your keystore file and password safe. If you lose them, you cannot update your app on Google Play.</Callout>
+
+### Configure Signing in Gradle
+
+Create `android/keystore.properties` (add to .gitignore):
+
+```properties
+storePassword=your_store_password
+keyPassword=your_key_password
+keyAlias=my-key-alias
+storeFile=../my-release-key.jks
+```
+
+Update `android/app/build.gradle`:
+
+```groovy
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+```
+
+### Build Release APK/AAB
+
+```bash
+cd android
+
+# Build AAB (recommended for Play Store)
+./gradlew bundleRelease
+
+# Or build APK
+./gradlew assembleRelease
+```
+
+Output locations:
+- AAB: `android/app/build/outputs/bundle/release/app-release.aab`
+- APK: `android/app/build/outputs/apk/release/app-release.apk`
+
+### Upload to Google Play Console
+
+1. Go to [Google Play Console](https://play.google.com/console)
+2. Create new app
+3. Fill in store listing:
+   - App name and description
+   - Screenshots and graphics
+   - Category and contact details
+4. Upload your AAB/APK
+5. Complete content rating questionnaire
+6. Set up pricing and distribution
+7. Submit for review
+
+</Steps>
+
+### Android Checklist
+
+- [ ] App icon (512x512 for Play Store)
+- [ ] Feature graphic (1024x500)
+- [ ] Screenshots for phone and tablet
+- [ ] Short and full description
+- [ ] Privacy policy URL
+- [ ] Content rating questionnaire
+- [ ] Target audience and content
+- [ ] Signing key securely stored
+- [ ] Version code incremented
+
+## App Store Assets
+
+### Required Screenshots
+
+<Tabs items={['iOS', 'Android']}>
+  <Tab>
+| Device | Size |
+|--------|------|
+| iPhone 6.7" | 1290 x 2796 |
+| iPhone 6.5" | 1284 x 2778 |
+| iPhone 5.5" | 1242 x 2208 |
+| iPad Pro 12.9" | 2048 x 2732 |
+  </Tab>
+  <Tab>
+| Type | Size |
+|------|------|
+| Phone | 1080 x 1920 (min) |
+| 7" Tablet | 1200 x 1920 |
+| 10" Tablet | 1800 x 2560 |
+  </Tab>
+</Tabs>
+
+### Tips for Screenshots
+
+- Show key features in first 2-3 screenshots
+- Use device frames for professional look
+- Add captions highlighting benefits
+- Keep text minimal and readable
+- Use consistent style across all screenshots
+
+## Versioning Strategy
+
+Use semantic versioning:
+
+```
+MAJOR.MINOR.PATCH
+1.0.0 → 1.0.1 (bug fix)
+1.0.1 → 1.1.0 (new feature)
+1.1.0 → 2.0.0 (breaking change)
+```
+
+For both platforms:
+- **Version Name** (e.g., "1.2.3"): User-visible version
+- **Version Code/Build** (e.g., 42): Internal number, must increment
+
+### Automating Version Updates
+
+```javascript
+// scripts/bump-version.js
+const fs = require('fs');
+
+const version = process.argv[2];
+const build = Date.now(); // Or increment from current
+
+// Update package.json
+const pkg = require('../package.json');
+pkg.version = version;
+fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+
+// Update iOS
+// Xcode project version is typically updated in Xcode
+
+// Update Android
+const gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+const updatedGradle = gradle
+  .replace(/versionName "[^"]*"/, `versionName "${version}"`)
+  .replace(/versionCode \d+/, `versionCode ${build}`);
+fs.writeFileSync('android/app/build.gradle', updatedGradle);
+```
+
+## Over-the-Air Updates
+
+For pushing updates without app store review, consider:
+
+- **Capgo**: Capacitor-specific OTA updates
+- **Appflow**: Ionic's official update service
+
+<Callout type="info">OTA updates can only update web assets (HTML, CSS, JS). Native code changes still require app store submission.</Callout>
+
+## CI/CD
+
+Automate builds with GitHub Actions:
+
+```yaml
+# .github/workflows/mobile.yml
+name: Mobile Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install and Build
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+
+      - name: Build AAB
+        run: |
+          cd android
+          ./gradlew bundleRelease
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+```
+
+## Common Rejection Reasons
+
+### iOS
+- Missing privacy policy
+- Incomplete metadata
+- Bugs or crashes
+- Guideline 4.2: Minimum functionality (app is too simple)
+- Guideline 2.1: Performance issues
+
+### Android
+- Missing privacy policy
+- Incorrect content rating
+- Policy violations
+- Crashes on review devices
+- Incomplete store listing

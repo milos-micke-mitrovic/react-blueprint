@@ -1,0 +1,493 @@
+---
+description: Production-ready authentication state management with Zustand, token handling, and protected routes.
+---
+
+# Auth Provider
+
+Complete authentication state management with Zustand, JWT handling, and React Router integration.
+
+import { Callout, Tabs, Tab, Steps } from 'nextra/components'
+
+## Overview
+
+This template provides:
+- Global auth state with Zustand
+- JWT token management (access + refresh)
+- Automatic token refresh
+- Protected route component
+- Login/logout functionality
+- Persistent auth across page reloads
+
+## Dependencies
+
+```bash
+npm install zustand jwt-decode
+npm install react-router-dom  # if using React Router
+```
+
+## Code
+
+<Tabs items={['authStore.ts', 'tokenService.ts', 'authService.ts', 'ProtectedRoute.tsx', 'useAuth.ts']}>
+  <Tab>
+```tsx
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { tokenService } from './tokenService';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  avatar?: string;
+  role: 'admin' | 'user';
+}
+
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+
+  // Actions
+  setUser: (user: User | null) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  logout: () => void;
+  initialize: () => Promise<void>;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      error: null,
+
+      setUser: (user) =>
+        set({
+          user,
+          isAuthenticated: !!user,
+          error: null,
+        }),
+
+      setLoading: (isLoading) => set({ isLoading }),
+
+      setError: (error) => set({ error, isLoading: false }),
+
+      logout: () => {
+        tokenService.clearTokens();
+        set({
+          user: null,
+          isAuthenticated: false,
+          error: null,
+        });
+      },
+
+      initialize: async () => {
+        const token = tokenService.getAccessToken();
+
+        if (!token) {
+          set({ isLoading: false });
+          return;
+        }
+
+        if (tokenService.isTokenExpired(token)) {
+          try {
+            await tokenService.refreshAccessToken();
+          } catch {
+            get().logout();
+            return;
+          }
+        }
+
+        try {
+          const response = await fetch('/api/auth/me', {
+            headers: {
+              Authorization: `Bearer ${tokenService.getAccessToken()}`,
+            },
+          });
+
+          if (response.ok) {
+            const user = await response.json();
+            set({ user, isAuthenticated: true, isLoading: false });
+          } else {
+            get().logout();
+          }
+        } catch {
+          get().logout();
+        }
+      },
+    }),
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+);
+```
+  </Tab>
+  <Tab>
+```tsx
+import { jwtDecode } from 'jwt-decode';
+
+const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+
+interface DecodedToken {
+  exp: number;
+  sub: string;
+  email: string;
+}
+
+export const tokenService = {
+  getAccessToken(): string | null {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  },
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  },
+
+  setTokens(accessToken: string, refreshToken?: string): void {
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
+  },
+
+  clearTokens(): void {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  },
+
+  isTokenExpired(token: string): boolean {
+    try {
+      const decoded = jwtDecode<DecodedToken>(token);
+      // Add 30 second buffer
+      return decoded.exp * 1000 < Date.now() + 30000;
+    } catch {
+      return true;
+    }
+  },
+
+  getTokenPayload(token: string): DecodedToken | null {
+    try {
+      return jwtDecode<DecodedToken>(token);
+    } catch {
+      return null;
+    }
+  },
+
+  async refreshAccessToken(): Promise<string> {
+    const refreshToken = this.getRefreshToken();
+
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      this.clearTokens();
+      throw new Error('Failed to refresh token');
+    }
+
+    const { accessToken, refreshToken: newRefreshToken } = await response.json();
+    this.setTokens(accessToken, newRefreshToken);
+
+    return accessToken;
+  },
+};
+```
+  </Tab>
+  <Tab>
+```tsx
+import { tokenService } from './tokenService';
+import { useAuthStore, type User } from './authStore';
+
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+interface AuthResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export const authService = {
+  async login(credentials: LoginCredentials): Promise<User> {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Login failed');
+    }
+
+    const data: AuthResponse = await response.json();
+    tokenService.setTokens(data.accessToken, data.refreshToken);
+    useAuthStore.getState().setUser(data.user);
+
+    return data.user;
+  },
+
+  async signup(data: { name: string; email: string; password: string }): Promise<User> {
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Signup failed');
+    }
+
+    const result: AuthResponse = await response.json();
+    tokenService.setTokens(result.accessToken, result.refreshToken);
+    useAuthStore.getState().setUser(result.user);
+
+    return result.user;
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${tokenService.getAccessToken()}`,
+        },
+      });
+    } finally {
+      useAuthStore.getState().logout();
+    }
+  },
+};
+```
+  </Tab>
+  <Tab>
+```tsx
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from '@/features/auth/stores/authStore';
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredRole?: 'admin' | 'user';
+  fallback?: React.ReactNode;
+}
+
+export function ProtectedRoute({
+  children,
+  requiredRole,
+  fallback,
+}: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user } = useAuthStore();
+  const location = useLocation();
+
+  if (isLoading) {
+    return fallback ?? (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Usage in routes:
+// <Route
+//   path="/dashboard"
+//   element={
+//     <ProtectedRoute>
+//       <DashboardPage />
+//     </ProtectedRoute>
+//   }
+// />
+//
+// <Route
+//   path="/admin"
+//   element={
+//     <ProtectedRoute requiredRole="admin">
+//       <AdminPage />
+//     </ProtectedRoute>
+//   }
+// />
+```
+  </Tab>
+  <Tab>
+```tsx
+import { useCallback } from 'react';
+import { useAuthStore } from '@/features/auth/stores/authStore';
+import { authService } from '@/features/auth/services/authService';
+
+export function useAuth() {
+  const { user, isAuthenticated, isLoading, error, logout: storeLogout } = useAuthStore();
+
+  const login = useCallback(async (email: string, password: string) => {
+    return authService.login({ email, password });
+  }, []);
+
+  const signup = useCallback(async (name: string, email: string, password: string) => {
+    return authService.signup({ name, email, password });
+  }, []);
+
+  const logout = useCallback(async () => {
+    await authService.logout();
+  }, []);
+
+  return {
+    user,
+    isAuthenticated,
+    isLoading,
+    error,
+    login,
+    signup,
+    logout,
+  };
+}
+```
+  </Tab>
+</Tabs>
+
+## Setup
+
+<Steps>
+
+### Initialize Auth on App Load
+
+```tsx
+// App.tsx or main.tsx
+import { useEffect } from 'react';
+import { useAuthStore } from '@/features/auth/stores/authStore';
+
+function App() {
+  const initialize = useAuthStore((state) => state.initialize);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  return <AppRouter />;
+}
+```
+
+### Configure API Client with Auto-Refresh
+
+```tsx
+// lib/apiClient.ts
+import { tokenService } from '@/features/auth/services/tokenService';
+
+const apiClient = {
+  async fetch(url: string, options: RequestInit = {}): Promise<Response> {
+    let token = tokenService.getAccessToken();
+
+    if (token && tokenService.isTokenExpired(token)) {
+      try {
+        token = await tokenService.refreshAccessToken();
+      } catch {
+        window.location.href = '/login';
+        throw new Error('Session expired');
+      }
+    }
+
+    const headers = new Headers(options.headers);
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    return fetch(url, { ...options, headers });
+  },
+};
+
+export default apiClient;
+```
+
+### Set Up Routes
+
+```tsx
+// app/router/AppRouter.tsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ProtectedRoute } from './ProtectedRoute';
+import { LoginPage } from '@/pages/LoginPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+
+export function AppRouter() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+</Steps>
+
+## File Structure
+
+```
+features/auth/
+├── components/
+│   ├── LoginForm.tsx
+│   ├── SignupForm.tsx
+│   └── index.ts
+├── hooks/
+│   ├── useAuth.ts
+│   └── index.ts
+├── services/
+│   ├── authService.ts
+│   ├── tokenService.ts
+│   └── index.ts
+├── stores/
+│   └── authStore.ts
+├── types/
+│   └── auth.types.ts
+└── index.ts
+```
+
+## Security Considerations
+
+<Callout type="warning">Never store sensitive data in localStorage in production. Consider using httpOnly cookies for refresh tokens.</Callout>
+
+- Use HTTPS in production
+- Implement CSRF protection
+- Set appropriate token expiration times
+- Validate tokens on the server side
+- Consider using httpOnly cookies for refresh tokens
+
+## Related
+
+- [Login Form](/docs/templates/components/auth/login-form) - Login form component
+- [Signup Form](/docs/templates/components/auth/signup-form) - Registration form
+- [Project Structure](/docs/getting-started/project-structure) - Feature organization

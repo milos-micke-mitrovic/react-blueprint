@@ -1,0 +1,166 @@
+---
+description: useMediaQuery hook for responsive design with JavaScript - detect breakpoints and media features.
+---
+
+# useMediaQuery
+
+React to CSS media query changes.
+
+## Use Cases
+
+- Conditional rendering based on screen size
+- Adjust component behavior for mobile/desktop
+- Dark mode detection
+- Reduced motion preferences
+
+## Code
+
+```typescript
+import { useState, useEffect } from 'react';
+
+export function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(query);
+    setMatches(mediaQuery.matches);
+
+    const handler = (event: MediaQueryListEvent) => {
+      setMatches(event.matches);
+    };
+
+    mediaQuery.addEventListener('change', handler);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handler);
+    };
+  }, [query]);
+
+  return matches;
+}
+```
+
+## Usage
+
+### Responsive Sidebar
+
+```tsx
+function Layout({ children }) {
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Auto-close sidebar on mobile when navigating
+  useEffect(() => {
+    if (!isDesktop) {
+      setSidebarOpen(false);
+    }
+  }, [isDesktop]);
+
+  return (
+    <div className="flex">
+      {(isDesktop || sidebarOpen) && (
+        <aside className="w-64 border-r">
+          <nav>...</nav>
+        </aside>
+      )}
+      <main className="flex-1">{children}</main>
+    </div>
+  );
+}
+```
+
+### Mobile Navigation
+
+```tsx
+function Navigation() {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
+  if (isMobile) {
+    return <MobileNav />;
+  }
+
+  return <DesktopNav />;
+}
+```
+
+### Dark Mode Detection
+
+```tsx
+function ThemeProvider({ children }) {
+  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const [theme, setTheme] = useLocalStorage('theme', 'system');
+
+  const isDark = theme === 'system' ? prefersDark : theme === 'dark';
+
+  return (
+    <div className={isDark ? 'dark' : ''}>
+      {children}
+    </div>
+  );
+}
+```
+
+### Reduced Motion
+
+```tsx
+function AnimatedComponent() {
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+
+  return (
+    <motion.div
+      animate={{ x: 100 }}
+      transition={{
+        duration: prefersReducedMotion ? 0 : 0.3,
+      }}
+    >
+      Content
+    </motion.div>
+  );
+}
+```
+
+## Tailwind Breakpoints Helper
+
+Create preset hooks for Tailwind breakpoints:
+
+```typescript
+// hooks/useBreakpoint.ts
+export function useBreakpoint() {
+  const sm = useMediaQuery('(min-width: 640px)');
+  const md = useMediaQuery('(min-width: 768px)');
+  const lg = useMediaQuery('(min-width: 1024px)');
+  const xl = useMediaQuery('(min-width: 1280px)');
+  const xxl = useMediaQuery('(min-width: 1536px)');
+
+  return { sm, md, lg, xl, xxl };
+}
+
+// Usage
+function Component() {
+  const { md, lg } = useBreakpoint();
+
+  const columns = lg ? 4 : md ? 2 : 1;
+
+  return <Grid columns={columns}>...</Grid>;
+}
+```
+
+## Common Media Queries
+
+| Query | Description |
+|-------|-------------|
+| `(min-width: 768px)` | Tablet and up |
+| `(min-width: 1024px)` | Desktop and up |
+| `(prefers-color-scheme: dark)` | Dark mode preference |
+| `(prefers-reduced-motion: reduce)` | Reduced motion preference |
+| `(orientation: portrait)` | Portrait orientation |
+| `(hover: hover)` | Device supports hover |

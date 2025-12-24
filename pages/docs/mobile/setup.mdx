@@ -1,0 +1,293 @@
+---
+description: Step-by-step guide to adding Capacitor to your React project for iOS and Android deployment.
+---
+
+# Capacitor Setup
+
+Add Capacitor to your existing React project.
+
+import { Callout, Steps, Tabs, Tab } from 'nextra/components'
+
+## Installation
+
+<Steps>
+
+### Install Capacitor Core
+
+```bash
+npm install @capacitor/core @capacitor/cli
+```
+
+### Initialize Capacitor
+
+```bash
+npx cap init
+```
+
+You'll be prompted for:
+- **App name**: Display name (e.g., "My App")
+- **Package ID**: Unique identifier (e.g., "com.mycompany.myapp")
+
+This creates `capacitor.config.ts`:
+
+```typescript
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.mycompany.myapp',
+  appName: 'My App',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https'
+  }
+};
+
+export default config;
+```
+
+### Add Platforms
+
+```bash
+# Install platform packages
+npm install @capacitor/ios @capacitor/android
+
+# Add native projects
+npx cap add ios
+npx cap add android
+```
+
+### Build and Sync
+
+```bash
+# Build your React app
+npm run build
+
+# Copy web assets to native projects
+npx cap sync
+```
+
+### Open Native IDEs
+
+```bash
+npx cap open ios      # Opens Xcode
+npx cap open android  # Opens Android Studio
+```
+
+</Steps>
+
+## Configuration
+
+### capacitor.config.ts
+
+```typescript
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.mycompany.myapp',
+  appName: 'My App',
+  webDir: 'dist',
+
+  // Server configuration
+  server: {
+    androidScheme: 'https',
+    // For development with live reload
+    // url: 'http://192.168.1.100:5173',
+    // cleartext: true,
+  },
+
+  // iOS specific
+  ios: {
+    contentInset: 'automatic',
+    preferredContentMode: 'mobile',
+    scheme: 'My App',
+  },
+
+  // Android specific
+  android: {
+    allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: false,
+  },
+
+  // Plugins configuration
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#ffffff',
+      showSpinner: false,
+    },
+    StatusBar: {
+      style: 'dark',
+      backgroundColor: '#ffffff',
+    },
+  },
+};
+
+export default config;
+```
+
+## Development Workflow
+
+### Live Reload
+
+For development with hot reload on device:
+
+<Tabs items={['Method 1: URL', 'Method 2: CLI']}>
+  <Tab>
+```bash
+# 1. Start your dev server
+npm run dev
+
+# 2. Update capacitor.config.ts
+server: {
+  url: 'http://YOUR_IP:5173',  # Your machine's IP
+  cleartext: true,             # Required for Android HTTP
+}
+
+# 3. Sync and run
+npx cap sync
+npx cap run ios     # or android
+```
+  </Tab>
+  <Tab>
+```bash
+# Use Capacitor's live reload flag
+npx cap run ios --livereload --external
+
+# For Android
+npx cap run android --livereload --external
+```
+  </Tab>
+</Tabs>
+
+<Callout type="warning">Remember to remove the `server.url` configuration before building for production.</Callout>
+
+### Sync Commands
+
+```bash
+# Copy web assets and update native plugins
+npx cap sync
+
+# Only copy web assets (faster)
+npx cap copy
+
+# Only update native plugins
+npx cap update
+```
+
+## Handling Safe Areas
+
+Mobile devices have notches and home indicators. Handle safe areas with CSS:
+
+```css
+/* globals.css */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  --safe-area-inset-right: env(safe-area-inset-right);
+}
+
+/* Apply to your layout */
+.app-container {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+```
+
+Or with Tailwind:
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      padding: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+      },
+    },
+  },
+};
+```
+
+## Platform Detection
+
+Detect which platform your app is running on:
+
+```typescript
+import { Capacitor } from '@capacitor/core';
+
+// Check platform
+const platform = Capacitor.getPlatform(); // 'web' | 'ios' | 'android'
+
+// Check if running natively
+const isNative = Capacitor.isNativePlatform();
+
+// Conditional features
+if (Capacitor.isPluginAvailable('Camera')) {
+  // Camera plugin is available
+}
+```
+
+Use in components:
+
+```tsx
+import { Capacitor } from '@capacitor/core';
+
+function DownloadButton() {
+  const isNative = Capacitor.isNativePlatform();
+
+  if (isNative) {
+    // Native: Use filesystem plugin
+    return <Button onClick={saveToDevice}>Save to Device</Button>;
+  }
+
+  // Web: Use standard download
+  return <a href="/file.pdf" download>Download</a>;
+}
+```
+
+## Package Scripts
+
+Add these scripts to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "cap:sync": "cap sync",
+    "cap:ios": "cap open ios",
+    "cap:android": "cap open android",
+    "mobile:ios": "npm run build && cap sync && cap open ios",
+    "mobile:android": "npm run build && cap sync && cap open android",
+    "mobile:live": "cap run ios --livereload --external"
+  }
+}
+```
+
+## Troubleshooting
+
+### iOS Build Fails
+
+```bash
+# Update CocoaPods
+cd ios/App && pod install --repo-update
+```
+
+### Android Gradle Issues
+
+```bash
+# Clean Android build
+cd android && ./gradlew clean
+```
+
+### Web Assets Not Updating
+
+```bash
+# Force full sync
+rm -rf ios/App/App/public
+rm -rf android/app/src/main/assets/public
+npx cap sync
+```

@@ -1,0 +1,326 @@
+---
+description: Production-ready signup form with React Hook Form, Zod validation, password confirmation, and terms acceptance.
+---
+
+# Signup Form
+
+A complete registration form with multi-field validation and password confirmation.
+
+import { Callout, Tabs, Tab } from 'nextra/components'
+
+## Preview
+
+A registration form with:
+- Name, email, and password fields
+- Password confirmation validation
+- Password strength requirements
+- Terms acceptance checkbox
+- Loading and error states
+
+## Dependencies
+
+```bash
+npm install react-hook-form zod @hookform/resolvers
+npx shadcn-ui@latest add button input label card checkbox alert
+```
+
+## Code
+
+<Tabs items={['SignupForm.tsx', 'signupSchema.ts', 'Usage']}>
+  <Tab>
+```tsx
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { signupSchema, type SignupFormData } from './signupSchema';
+
+interface SignupFormProps {
+  onSubmit: (data: SignupFormData) => Promise<void>;
+  onLoginClick?: () => void;
+}
+
+export function SignupForm({ onSubmit, onLoginClick }: SignupFormProps) {
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      acceptTerms: false,
+    },
+  });
+
+  const acceptTerms = watch('acceptTerms');
+
+  const handleFormSubmit = async (data: SignupFormData) => {
+    try {
+      setServerError(null);
+      await onSubmit(data);
+    } catch (error) {
+      setServerError(
+        error instanceof Error ? error.message : 'An error occurred'
+      );
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-md">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+        <CardDescription>
+          Enter your details to create your account
+        </CardDescription>
+      </CardHeader>
+      <form onSubmit={handleSubmit(handleFormSubmit)}>
+        <CardContent className="space-y-4">
+          {serverError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="name">Full Name</Label>
+            <Input
+              id="name"
+              type="text"
+              placeholder="John Doe"
+              autoComplete="name"
+              disabled={isSubmitting}
+              aria-invalid={!!errors.name}
+              {...register('name')}
+            />
+            {errors.name && (
+              <p className="text-sm text-destructive">{errors.name.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              autoComplete="email"
+              disabled={isSubmitting}
+              aria-invalid={!!errors.email}
+              {...register('email')}
+            />
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              disabled={isSubmitting}
+              aria-invalid={!!errors.password}
+              {...register('password')}
+            />
+            {errors.password && (
+              <p className="text-sm text-destructive">{errors.password.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              disabled={isSubmitting}
+              aria-invalid={!!errors.confirmPassword}
+              {...register('confirmPassword')}
+            />
+            {errors.confirmPassword && (
+              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+            )}
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="acceptTerms"
+              checked={acceptTerms}
+              onCheckedChange={(checked) => setValue('acceptTerms', checked === true)}
+              disabled={isSubmitting}
+            />
+            <Label htmlFor="acceptTerms" className="text-sm font-normal leading-tight">
+              I agree to the{' '}
+              <a href="/terms" className="text-primary hover:underline">
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="/privacy" className="text-primary hover:underline">
+                Privacy Policy
+              </a>
+            </Label>
+          </div>
+          {errors.acceptTerms && (
+            <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex flex-col gap-4">
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating account...' : 'Create account'}
+          </Button>
+
+          {onLoginClick && (
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={onLoginClick}
+                className="text-primary hover:underline"
+              >
+                Sign in
+              </button>
+            </p>
+          )}
+        </CardFooter>
+      </form>
+    </Card>
+  );
+}
+```
+  </Tab>
+  <Tab>
+```tsx
+import { z } from 'zod';
+
+export const signupSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .min(2, 'Name must be at least 2 characters'),
+  email: z
+    .string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email'),
+  password: z
+    .string()
+    .min(1, 'Password is required')
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+  confirmPassword: z
+    .string()
+    .min(1, 'Please confirm your password'),
+  acceptTerms: z
+    .boolean()
+    .refine(val => val === true, 'You must accept the terms'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
+export type SignupFormData = z.infer<typeof signupSchema>;
+```
+  </Tab>
+  <Tab>
+```tsx
+// pages/signup.tsx or app/signup/page.tsx
+
+import { useNavigate } from 'react-router-dom';
+import { SignupForm } from '@/features/auth/components/SignupForm';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+
+export default function SignupPage() {
+  const navigate = useNavigate();
+  const { signup } = useAuth();
+
+  const handleSubmit = async (data: SignupFormData) => {
+    await signup(data.name, data.email, data.password);
+    navigate('/dashboard');
+  };
+
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <SignupForm
+        onSubmit={handleSubmit}
+        onLoginClick={handleLoginClick}
+      />
+    </div>
+  );
+}
+```
+  </Tab>
+</Tabs>
+
+## Validation Rules
+
+| Field | Rules |
+|-------|-------|
+| Name | Required, minimum 2 characters |
+| Email | Required, valid email format |
+| Password | Required, min 8 chars, uppercase, lowercase, number |
+| Confirm Password | Must match password |
+| Terms | Must be accepted |
+
+## Password Strength Indicator
+
+Add a visual password strength indicator:
+
+```tsx
+function getPasswordStrength(password: string): { score: number; label: string } {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+  return { score, label: labels[Math.min(score, 5)] };
+}
+
+// In your component
+const password = watch('password');
+const strength = getPasswordStrength(password || '');
+
+<div className="space-y-1">
+  <div className="flex gap-1">
+    {[1, 2, 3, 4, 5].map((level) => (
+      <div
+        key={level}
+        className={`h-1 flex-1 rounded ${
+          level <= strength.score ? 'bg-green-500' : 'bg-muted'
+        }`}
+      />
+    ))}
+  </div>
+  <p className="text-xs text-muted-foreground">{strength.label}</p>
+</div>
+```
+
+## Related
+
+- [Login Form](/docs/templates/components/auth/login-form) - Sign in form
+- [Auth Provider](/docs/templates/components/auth/auth-provider) - Authentication state

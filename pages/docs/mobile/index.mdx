@@ -1,0 +1,95 @@
+---
+description: Deploy your React app to iOS and Android app stores using Capacitor while keeping your existing codebase.
+---
+
+# Mobile
+
+Ship your React app to the iOS App Store and Google Play Store.
+
+import { Callout, Cards, Card } from 'nextra/components'
+
+## Why Capacitor?
+
+Capacitor lets you take your existing React web app and deploy it as a native mobile app. Unlike React Native, you don't need to rewrite your codebase.
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Capacitor** | Keep existing React code, web-first, native access | Slightly larger bundle, WebView-based |
+| **React Native** | True native UI, better performance | Complete rewrite, different paradigm |
+| **PWA** | No app store needed, instant updates | Limited native access, no store presence |
+
+<Callout type="info">Choose Capacitor if you want to maintain a single React codebase for web and mobile. Choose React Native if you're building a mobile-first app with complex native interactions.</Callout>
+
+## What Capacitor Provides
+
+- **Native Runtime**: Run your React app in a native WebView with full native API access
+- **Native Plugins**: Camera, filesystem, push notifications, biometrics, and more
+- **Live Reload**: Hot reload during mobile development
+- **Web Compatibility**: Same codebase runs on web, iOS, and Android
+- **Native Project Access**: Full access to Xcode and Android Studio projects
+
+## When to Use Mobile
+
+Consider deploying to app stores when you need:
+
+- Push notifications
+- Offline-first functionality
+- Access to device hardware (camera, sensors, contacts)
+- App store discoverability
+- Home screen presence
+
+## Sections
+
+<Cards>
+  <Card title="Capacitor Setup" href="/docs/mobile/setup" />
+  <Card title="Native Plugins" href="/docs/mobile/native-plugins" />
+  <Card title="App Store Deployment" href="/docs/mobile/app-store" />
+</Cards>
+
+## Quick Start
+
+```bash
+# Install Capacitor
+npm install @capacitor/core @capacitor/cli
+
+# Initialize Capacitor in your project
+npx cap init "My App" com.mycompany.myapp
+
+# Add platforms
+npm install @capacitor/ios @capacitor/android
+npx cap add ios
+npx cap add android
+
+# Build and sync
+npm run build
+npx cap sync
+
+# Open native IDEs
+npx cap open ios      # Opens Xcode
+npx cap open android  # Opens Android Studio
+```
+
+## Project Structure
+
+After adding Capacitor, your project will have:
+
+```
+my-react-app/
+├── src/                    # Your React code
+├── dist/                   # Build output
+├── ios/                    # Native iOS project
+│   └── App/
+│       └── App/
+│           └── capacitor.config.json
+├── android/                # Native Android project
+│   └── app/
+│       └── src/
+└── capacitor.config.ts     # Capacitor configuration
+```
+
+## Requirements
+
+| Platform | Requirements |
+|----------|--------------|
+| iOS | macOS, Xcode 14+, Apple Developer account ($99/year) |
+| Android | Android Studio, JDK 17+, Google Play Console ($25 one-time) |

@@ -1,56 +1,331 @@
 ---
-description: Recommended React tech stack for 2026 - React 18, TypeScript, Vite, Zustand, TanStack Query, Tailwind CSS, and testing tools for scalable applications.
+description: Recommended React tech stack - React 18, TypeScript, Vite, Tailwind CSS, and curated libraries for state, data fetching, forms, and more.
 ---
 
 # Tech Stack
 
 Our recommended stack for building modern React applications.
 
-## Core Technologies
+import { Callout, Tabs, Tab } from 'nextra/components'
 
-| Category | Technology | Version | Purpose |
-|----------|------------|---------|---------|
-| Framework | React | 18.x | UI library |
-| Language | TypeScript | 5.x | Type safety |
-| Build Tool | Vite | 5.x | Fast development & bundling |
-| Routing | React Router | 6.x | Client-side routing |
-| State Management | Zustand | 4.x | Global state |
-| Server State | TanStack Query | 5.x | API data fetching & caching |
-| Styling | Tailwind CSS | 3.x | Utility-first CSS |
-| Component Library | shadcn/ui | Latest | Accessible UI components |
-| Forms | React Hook Form | 7.x | Form handling |
-| Validation | Zod | 3.x | Schema validation |
-| HTTP Client | Axios | 1.x | API requests |
-| Testing | Vitest + Testing Library | Latest | Unit & integration testing |
-| E2E Testing | Playwright | Latest | End-to-end testing |
+<Callout type="info">Not everything here is required. **Core** libraries are essential for every project. **Recommended** libraries are commonly needed. **Optional** libraries depend on your specific requirements.</Callout>
+
+## Core (Required)
+
+These form the foundation of every project.
+
+| Library | Version | Purpose | Install |
+|---------|---------|---------|---------|
+| [React](https://react.dev) | 18.x | UI library | `npm create vite@latest` |
+| [TypeScript](https://www.typescriptlang.org) | 5.x | Type safety | Included with Vite template |
+| [Vite](https://vitejs.dev) | 5.x | Build tool, fast HMR | `npm create vite@latest` |
+| [Tailwind CSS](https://tailwindcss.com) | 3.x | Utility-first styling | `npm install -D tailwindcss` |
+
+### Why These?
+
+**React 18** - Industry standard with concurrent features, automatic batching, and Suspense.
+
+**TypeScript** - Catches errors at compile time, provides excellent IDE support, and makes code self-documenting. Non-negotiable for professional projects.
+
+**Vite** - Blazing fast development with native ESM, instant HMR, and optimized production builds. Replaces Create React App.
+
+**Tailwind CSS** - Utility-first CSS that scales. No context switching between files, consistent design tokens, tiny production bundles.
+
+## Recommended
+
+Libraries you'll need in most projects.
+
+### UI Components
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [shadcn/ui](https://ui.shadcn.com) | Accessible component primitives | Always - copy-paste components you own |
+| [lucide-react](https://lucide.dev) | Icon library | Need icons (most projects) |
+
+```bash
+npx shadcn-ui@latest init
+npm install lucide-react
+```
+
+**shadcn/ui** - Not a component library you install, but components you copy into your project. Built on Radix UI primitives, fully accessible, completely customizable. You own the code.
+
+**lucide-react** - Beautiful, consistent icons. Tree-shakeable (only imports what you use). Fork of Feather Icons with more icons and active maintenance.
+
+```tsx
+import { Search, Menu, X, ChevronDown } from 'lucide-react';
+
+<Button>
+  <Search className="h-4 w-4 mr-2" />
+  Search
+</Button>
+```
+
+### State Management
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [TanStack Query](https://tanstack.com/query) | Server state, caching | Fetching data from APIs |
+| [Zustand](https://zustand-demo.pmnd.rs) | Client state | Global UI state, user preferences |
+
+```bash
+npm install @tanstack/react-query zustand
+```
+
+**TanStack Query** - Handles everything about server state: caching, background refetching, stale-while-revalidate, optimistic updates, infinite queries. Eliminates most Redux use cases.
+
+**Zustand** - Minimal, fast client state. No boilerplate, no providers, just simple stores. Perfect for UI state like sidebar open/closed, theme, modals.
+
+<Callout>Use TanStack Query for server data, Zustand for client-only state. See [State Management](/docs/state/decision-tree) for guidance.</Callout>
+
+### Forms & Validation
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [React Hook Form](https://react-hook-form.com) | Form handling | Any form beyond a single input |
+| [Zod](https://zod.dev) | Schema validation | Validating form data, API responses |
+| [@hookform/resolvers](https://github.com/react-hook-form/resolvers) | Connect Zod to RHF | Using React Hook Form + Zod together |
+
+```bash
+npm install react-hook-form zod @hookform/resolvers
+```
+
+**React Hook Form** - Performant forms with minimal re-renders. Uncontrolled inputs by default, but works with controlled too. Excellent DevTools.
+
+**Zod** - TypeScript-first schema validation. Define once, get type inference and runtime validation. Works everywhere: forms, API responses, environment variables.
+
+```tsx
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+type FormData = z.infer<typeof schema>; // Types derived automatically
+```
+
+### Utilities
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [clsx](https://github.com/lukeed/clsx) | Conditional class names | Conditionally applying classes |
+| [tailwind-merge](https://github.com/dcastil/tailwind-merge) | Merge Tailwind classes | Overriding Tailwind classes in components |
+| [date-fns](https://date-fns.org) | Date formatting | Working with dates |
+
+```bash
+npm install clsx tailwind-merge date-fns
+```
+
+**clsx + tailwind-merge** - Use together as a `cn` utility for conditional classes that properly merge Tailwind:
+
+```tsx
+// lib/cn.ts
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+// Usage
+<div className={cn(
+  'px-4 py-2 rounded',
+  isActive && 'bg-blue-500',
+  className // Props can override
+)} />
+```
+
+**date-fns** - Modular date utility library. Import only what you need. Immutable, tree-shakeable, comprehensive.
+
+```tsx
+import { format, formatDistanceToNow } from 'date-fns';
+
+format(new Date(), 'MMM d, yyyy');           // "Jan 15, 2026"
+formatDistanceToNow(date, { addSuffix: true }); // "3 hours ago"
+```
+
+### Notifications
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [Sonner](https://sonner.emilkowal.ski) | Toast notifications | User feedback, success/error messages |
+
+```bash
+npm install sonner
+```
+
+**Sonner** - Beautiful toast notifications. Simple API, accessible, customizable, from the Vercel ecosystem.
+
+```tsx
+// Add Toaster to your app root
+import { Toaster } from 'sonner';
+
+function App() {
+  return (
+    <>
+      <Routes />
+      <Toaster position="top-right" richColors />
+    </>
+  );
+}
+
+// Use anywhere
+import { toast } from 'sonner';
+
+toast.success('Changes saved');
+toast.error('Something went wrong');
+toast.promise(saveData(), {
+  loading: 'Saving...',
+  success: 'Saved!',
+  error: 'Failed to save',
+});
+```
+
+### Routing
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [React Router](https://reactrouter.com) | Client-side routing | Multi-page SPAs |
+
+```bash
+npm install react-router-dom
+```
+
+**React Router** - De facto standard for React routing. Supports nested routes, loaders, actions, and lazy loading.
+
+## Optional
+
+Add these based on project requirements.
+
+### Data Tables
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [TanStack Table](https://tanstack.com/table) | Headless table logic | Complex tables with sorting, filtering, pagination |
+
+```bash
+npm install @tanstack/react-table
+```
+
+**TanStack Table** - Headless (no UI), handles all table logic. Bring your own components and styling. Powerful but has a learning curve. See [Data Table Template](/docs/templates/data-table).
+
+### HTTP Client
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [Axios](https://axios-http.com) | HTTP requests | Need interceptors, upload progress, cancellation |
+| Native fetch | HTTP requests | Simple requests, modern browsers |
+
+```bash
+npm install axios  # Only if needed
+```
+
+<Callout>Native `fetch` is sufficient for most projects, especially with TanStack Query. Use Axios if you need request/response interceptors, upload progress, or automatic transforms.</Callout>
+
+### Animation
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [Framer Motion](https://www.framer.com/motion) | Animations | Complex animations, gestures, layout animations |
+
+```bash
+npm install framer-motion
+```
+
+**Framer Motion** - Powerful but adds ~30KB. For simple animations, prefer CSS transitions or Tailwind's built-in transitions.
+
+### Mobile
+
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| [Capacitor](https://capacitorjs.com) | Native mobile wrapper | Deploying to iOS/Android app stores |
+
+```bash
+npm install @capacitor/core @capacitor/cli
+```
+
+See [Mobile](/docs/mobile) section for full setup.
 
 ## Development Tools
 
-| Tool | Purpose |
-|------|---------|
-| pnpm | Package manager (preferred) |
-| Husky | Git hooks |
-| lint-staged | Pre-commit linting |
-| Storybook | Component documentation |
+| Tool | Purpose | Install |
+|------|---------|---------|
+| [pnpm](https://pnpm.io) | Fast package manager | `npm install -g pnpm` |
+| [ESLint](https://eslint.org) | Code linting | Included with Vite |
+| [Prettier](https://prettier.io) | Code formatting | `npm install -D prettier` |
+| [Husky](https://typicode.github.io/husky) | Git hooks | `npm install -D husky` |
+| [lint-staged](https://github.com/lint-staged/lint-staged) | Pre-commit linting | `npm install -D lint-staged` |
 
-## Why This Stack?
+### Testing
 
-### React 18
-- Concurrent features for better UX
-- Automatic batching
-- Suspense for data fetching
+| Tool | Purpose | When to Use |
+|------|---------|-------------|
+| [Vitest](https://vitest.dev) | Unit testing | Testing utilities, hooks, logic |
+| [Testing Library](https://testing-library.com) | Component testing | Testing React components |
+| [Playwright](https://playwright.dev) | E2E testing | Testing full user flows |
+| [MSW](https://mswjs.io) | API mocking | Mocking API calls in tests |
 
-### TypeScript
-- Catch errors at compile time
-- Better IDE support
-- Self-documenting code
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom
+npm install -D @playwright/test
+npm install -D msw
+```
 
-### Vite
-- Lightning-fast HMR
-- Optimized production builds
-- Native ESM support
+## Quick Install
 
-### Zustand + TanStack Query
-- Clear separation of client/server state
-- Minimal boilerplate
-- Excellent DevTools
+Copy-paste to install all recommended libraries:
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab>
+```bash
+# Core (included with Vite template)
+npm create vite@latest my-app -- --template react-ts
+
+# Recommended
+npm install @tanstack/react-query zustand react-router-dom
+npm install react-hook-form zod @hookform/resolvers
+npm install clsx tailwind-merge date-fns lucide-react sonner
+
+# UI Components
+npx shadcn-ui@latest init
+
+# Dev tools
+npm install -D vitest @testing-library/react @testing-library/jest-dom
+npm install -D prettier eslint-config-prettier
+```
+  </Tab>
+  <Tab>
+```bash
+# Core (included with Vite template)
+pnpm create vite my-app --template react-ts
+
+# Recommended
+pnpm add @tanstack/react-query zustand react-router-dom
+pnpm add react-hook-form zod @hookform/resolvers
+pnpm add clsx tailwind-merge date-fns lucide-react sonner
+
+# UI Components
+pnpm dlx shadcn-ui@latest init
+
+# Dev tools
+pnpm add -D vitest @testing-library/react @testing-library/jest-dom
+pnpm add -D prettier eslint-config-prettier
+```
+  </Tab>
+  <Tab>
+```bash
+# Core (included with Vite template)
+yarn create vite my-app --template react-ts
+
+# Recommended
+yarn add @tanstack/react-query zustand react-router-dom
+yarn add react-hook-form zod @hookform/resolvers
+yarn add clsx tailwind-merge date-fns lucide-react sonner
+
+# UI Components
+npx shadcn-ui@latest init
+
+# Dev tools
+yarn add -D vitest @testing-library/react @testing-library/jest-dom
+yarn add -D prettier eslint-config-prettier
+```
+  </Tab>
+</Tabs>

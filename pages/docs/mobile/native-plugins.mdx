@@ -1,0 +1,408 @@
+---
+description: Using Capacitor native plugins for camera, storage, push notifications, biometrics, and more.
+---
+
+# Native Plugins
+
+Access native device features with Capacitor plugins.
+
+import { Callout, Tabs, Tab } from 'nextra/components'
+
+## Official Plugins
+
+Capacitor provides official plugins for common native features:
+
+| Plugin | Purpose |
+|--------|---------|
+| `@capacitor/camera` | Take photos, select from gallery |
+| `@capacitor/filesystem` | Read/write files on device |
+| `@capacitor/storage` | Key-value storage (deprecated, use Preferences) |
+| `@capacitor/preferences` | Persistent key-value storage |
+| `@capacitor/push-notifications` | Push notification handling |
+| `@capacitor/local-notifications` | Local/scheduled notifications |
+| `@capacitor/haptics` | Haptic feedback |
+| `@capacitor/share` | Native share sheet |
+| `@capacitor/clipboard` | Copy/paste |
+| `@capacitor/status-bar` | Status bar styling |
+| `@capacitor/splash-screen` | Splash screen control |
+| `@capacitor/keyboard` | Keyboard events and control |
+| `@capacitor/app` | App state, URLs, back button |
+| `@capacitor/network` | Network status |
+| `@capacitor/device` | Device info |
+| `@capacitor/geolocation` | GPS location |
+| `@capacitor/motion` | Accelerometer, gyroscope |
+| `@capacitor/browser` | In-app browser |
+
+## Camera
+
+Take photos or select from gallery:
+
+```bash
+npm install @capacitor/camera
+npx cap sync
+```
+
+```typescript
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+
+async function takePhoto() {
+  const photo = await Camera.getPhoto({
+    quality: 90,
+    allowEditing: false,
+    resultType: CameraResultType.Uri,
+    source: CameraSource.Camera,  // or CameraSource.Photos for gallery
+  });
+
+  // photo.webPath contains the image URL
+  return photo.webPath;
+}
+
+async function selectFromGallery() {
+  const photo = await Camera.getPhoto({
+    quality: 90,
+    resultType: CameraResultType.Uri,
+    source: CameraSource.Photos,
+  });
+
+  return photo.webPath;
+}
+
+// Select multiple images
+async function selectMultiple() {
+  const photos = await Camera.pickImages({
+    quality: 90,
+    limit: 5,
+  });
+
+  return photos.photos.map(p => p.webPath);
+}
+```
+
+### Camera Hook
+
+```typescript
+// hooks/useCamera.ts
+import { useState } from 'react';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
+
+export function useCamera() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const takePhoto = async () => {
+    if (!Capacitor.isPluginAvailable('Camera')) {
+      setError('Camera not available');
+      return null;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Prompt,  // Let user choose
+      });
+
+      return photo.webPath;
+    } catch (err) {
+      if ((err as Error).message !== 'User cancelled photos app') {
+        setError('Failed to take photo');
+      }
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { takePhoto, isLoading, error };
+}
+```
+
+<Callout type="info">On iOS, add `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` to your Info.plist with usage descriptions.</Callout>
+
+## Push Notifications
+
+Handle push notifications:
+
+```bash
+npm install @capacitor/push-notifications
+npx cap sync
+```
+
+```typescript
+import { PushNotifications } from '@capacitor/push-notifications';
+
+// Request permission and register
+async function initPushNotifications() {
+  const permission = await PushNotifications.requestPermissions();
+
+  if (permission.receive === 'granted') {
+    await PushNotifications.register();
+  }
+}
+
+// Listen for registration token
+PushNotifications.addListener('registration', (token) => {
+  console.log('Push token:', token.value);
+  // Send token to your backend
+});
+
+// Handle notification received while app is open
+PushNotifications.addListener('pushNotificationReceived', (notification) => {
+  console.log('Notification:', notification);
+});
+
+// Handle notification tap
+PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+  console.log('Action:', action.notification);
+  // Navigate based on notification data
+});
+```
+
+### Push Notifications Hook
+
+```typescript
+// hooks/usePushNotifications.ts
+import { useEffect, useState } from 'react';
+import { PushNotifications, Token } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
+
+export function usePushNotifications(onNotificationTap?: (data: any) => void) {
+  const [token, setToken] = useState<string | null>(null);
+  const [isSupported, setIsSupported] = useState(false);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    setIsSupported(true);
+
+    const register = async () => {
+      const permission = await PushNotifications.requestPermissions();
+      if (permission.receive === 'granted') {
+        await PushNotifications.register();
+      }
+    };
+
+    register();
+
+    const tokenListener = PushNotifications.addListener('registration', (t: Token) => {
+      setToken(t.value);
+    });
+
+    const tapListener = PushNotifications.addListener(
+      'pushNotificationActionPerformed',
+      (action) => {
+        onNotificationTap?.(action.notification.data);
+      }
+    );
+
+    return () => {
+      tokenListener.remove();
+      tapListener.remove();
+    };
+  }, [onNotificationTap]);
+
+  return { token, isSupported };
+}
+```
+
+## Local Storage (Preferences)
+
+Persistent key-value storage:
+
+```bash
+npm install @capacitor/preferences
+npx cap sync
+```
+
+```typescript
+import { Preferences } from '@capacitor/preferences';
+
+// Store value
+await Preferences.set({
+  key: 'user',
+  value: JSON.stringify({ id: 1, name: 'John' }),
+});
+
+// Retrieve value
+const { value } = await Preferences.get({ key: 'user' });
+const user = value ? JSON.parse(value) : null;
+
+// Remove value
+await Preferences.remove({ key: 'user' });
+
+// Clear all
+await Preferences.clear();
+```
+
+### Storage Hook
+
+```typescript
+// hooks/usePreferences.ts
+import { useCallback } from 'react';
+import { Preferences } from '@capacitor/preferences';
+
+export function usePreferences() {
+  const get = useCallback(async <T>(key: string): Promise<T | null> => {
+    const { value } = await Preferences.get({ key });
+    return value ? JSON.parse(value) : null;
+  }, []);
+
+  const set = useCallback(async <T>(key: string, value: T): Promise<void> => {
+    await Preferences.set({ key, value: JSON.stringify(value) });
+  }, []);
+
+  const remove = useCallback(async (key: string): Promise<void> => {
+    await Preferences.remove({ key });
+  }, []);
+
+  return { get, set, remove };
+}
+```
+
+## Biometric Authentication
+
+Use Face ID, Touch ID, or fingerprint:
+
+```bash
+npm install @capacitor-community/biometric-auth
+npx cap sync
+```
+
+```typescript
+import { BiometricAuth } from '@capacitor-community/biometric-auth';
+
+async function authenticateWithBiometrics() {
+  // Check if available
+  const { isAvailable } = await BiometricAuth.isAvailable();
+
+  if (!isAvailable) {
+    throw new Error('Biometric authentication not available');
+  }
+
+  // Authenticate
+  await BiometricAuth.authenticate({
+    reason: 'Verify your identity',
+    title: 'Authentication Required',
+    subtitle: 'Use biometrics to continue',
+    negativeButtonText: 'Cancel',
+  });
+
+  return true;
+}
+```
+
+## Share
+
+Native share sheet:
+
+```bash
+npm install @capacitor/share
+npx cap sync
+```
+
+```typescript
+import { Share } from '@capacitor/share';
+
+async function shareContent() {
+  await Share.share({
+    title: 'Check this out!',
+    text: 'Really interesting content',
+    url: 'https://example.com',
+    dialogTitle: 'Share with friends',
+  });
+}
+```
+
+## Haptics
+
+Haptic feedback:
+
+```bash
+npm install @capacitor/haptics
+npx cap sync
+```
+
+```typescript
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+
+// Light tap feedback
+await Haptics.impact({ style: ImpactStyle.Light });
+
+// Medium tap
+await Haptics.impact({ style: ImpactStyle.Medium });
+
+// Heavy tap
+await Haptics.impact({ style: ImpactStyle.Heavy });
+
+// Success notification
+await Haptics.notification({ type: NotificationType.Success });
+
+// Error notification
+await Haptics.notification({ type: NotificationType.Error });
+
+// Selection feedback
+await Haptics.selectionChanged();
+```
+
+## Network Status
+
+Monitor connectivity:
+
+```bash
+npm install @capacitor/network
+npx cap sync
+```
+
+```typescript
+import { Network } from '@capacitor/network';
+
+// Get current status
+const status = await Network.getStatus();
+console.log('Connected:', status.connected);
+console.log('Type:', status.connectionType); // 'wifi' | 'cellular' | 'none'
+
+// Listen for changes
+Network.addListener('networkStatusChange', (status) => {
+  console.log('Network status changed:', status.connected);
+});
+```
+
+### Network Hook
+
+```typescript
+// hooks/useNetwork.ts
+import { useEffect, useState } from 'react';
+import { Network, ConnectionStatus } from '@capacitor/network';
+
+export function useNetwork() {
+  const [status, setStatus] = useState<ConnectionStatus | null>(null);
+
+  useEffect(() => {
+    Network.getStatus().then(setStatus);
+
+    const listener = Network.addListener('networkStatusChange', setStatus);
+
+    return () => {
+      listener.remove();
+    };
+  }, []);
+
+  return {
+    isConnected: status?.connected ?? true,
+    connectionType: status?.connectionType ?? 'unknown',
+  };
+}
+```
+
+## Best Practices
+
+1. **Check Plugin Availability**: Always check if a plugin is available before using it
+2. **Handle Permissions**: Request permissions gracefully with clear explanations
+3. **Graceful Fallbacks**: Provide web alternatives when native features unavailable
+4. **Error Handling**: Catch and handle plugin errors appropriately
+5. **Cleanup Listeners**: Remove event listeners on component unmount

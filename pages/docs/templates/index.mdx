@@ -1,0 +1,101 @@
+---
+description: Production-ready React templates - hooks, utilities, and components with TypeScript, Tailwind CSS, and shadcn/ui.
+---
+
+# Templates
+
+Copy-paste code for common React patterns.
+
+import { Cards, Card, Callout } from 'nextra/components'
+
+<Callout type="info">All templates are production-ready with TypeScript, proper error handling, and accessibility built-in.</Callout>
+
+## Categories
+
+<Cards>
+  <Card title="Hooks" href="/docs/templates/hooks" />
+  <Card title="Utilities" href="/docs/templates/utils" />
+  <Card title="Components" href="/docs/templates/components" />
+</Cards>
+
+## Hooks
+
+Reusable React hooks for common functionality.
+
+| Hook | Purpose |
+|------|---------|
+| [useDebounce](/docs/templates/hooks/use-debounce) | Delay value updates for search inputs |
+| [useLocalStorage](/docs/templates/hooks/use-local-storage) | Persist state in localStorage |
+| [useClickOutside](/docs/templates/hooks/use-click-outside) | Detect clicks outside elements |
+| [useMediaQuery](/docs/templates/hooks/use-media-query) | Responsive design with JS |
+| [useCopyToClipboard](/docs/templates/hooks/use-copy-to-clipboard) | Copy text with feedback |
+| [useToggle](/docs/templates/hooks/use-toggle) | Boolean state management |
+
+## Utilities
+
+Helper functions for common operations.
+
+| Utility | Purpose |
+|---------|---------|
+| [cn](/docs/templates/utils/cn) | Merge Tailwind classes |
+| [Date Formatting](/docs/templates/utils/format-date) | Format dates with date-fns |
+| [Currency Formatting](/docs/templates/utils/format-currency) | Format money values |
+| [String Helpers](/docs/templates/utils/string-helpers) | Slugify, truncate, capitalize |
+
+## Components
+
+Production-ready React components organized by category.
+
+### Authentication
+
+| Component | Purpose |
+|-----------|---------|
+| [Login Form](/docs/templates/components/auth/login-form) | Sign in with validation |
+| [Signup Form](/docs/templates/components/auth/signup-form) | Registration with password rules |
+| [Auth Provider](/docs/templates/components/auth/auth-provider) | Zustand auth state + JWT |
+
+### Data Display
+
+| Component | Purpose |
+|-----------|---------|
+| [Data Table](/docs/templates/components/data/data-table) | TanStack Table with sorting, filtering |
+| [Infinite List](/docs/templates/components/data/infinite-list) | Infinite scroll with TanStack Query |
+| [Search with Filters](/docs/templates/components/data/search-filters) | Debounced search + URL state |
+
+### User Management
+
+| Component | Purpose |
+|-----------|---------|
+| [User Profile](/docs/templates/components/user/user-profile) | Profile editing with avatar upload |
+
+## Tech Stack
+
+All templates use:
+
+| Technology | Purpose |
+|------------|---------|
+| TypeScript | Type safety |
+| Tailwind CSS | Styling |
+| shadcn/ui | UI primitives |
+| React Hook Form | Form handling |
+| Zod | Validation |
+| TanStack Query | Server state |
+
+## Installation
+
+Install the base dependencies for all templates:
+
+```bash
+# Core utilities
+npm install clsx tailwind-merge date-fns
+
+# Forms and validation
+npm install react-hook-form zod @hookform/resolvers
+
+# Server state
+npm install @tanstack/react-query
+
+# UI components
+npx shadcn-ui@latest init
+npx shadcn-ui@latest add button input label card checkbox alert
+```

@@ -3,60 +3,142 @@ title: ReactBlueprint - React Best Practices, Patterns & Project Structure Guide
 description: Comprehensive guide to React best practices, TypeScript patterns, project structure, state management with Zustand & TanStack Query. Copy-paste ready code examples for scalable React applications.
 ---
 
-import { Callout, Cards, Card } from 'nextra/components'
+import { Cards, Card } from 'nextra/components'
 
-<div className="hero-gradient -mx-6 -mt-6 px-6 pt-16 pb-20 sm:-mx-8 sm:px-8 md:-mx-12 md:px-12">
+<div className="hero-gradient -mx-6 -mt-6 px-6 pt-20 pb-24 sm:-mx-8 sm:px-8 md:-mx-12 md:px-12">
   <div className="mx-auto max-w-4xl text-center">
-    <h1 className="text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-6xl">{"Build Scalable React Apps"}<span className="block text-orange-500">{"The Right Way"}</span></h1>
+    <p className="mb-4 text-sm font-medium uppercase tracking-wider text-orange-500">{"For React Developers"}</p>
+    <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
+      {"Stop Reinventing"}
+      <span className="block text-orange-500">{"Best Practices"}</span>
+    </h1>
 
-    <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-400">{"Modern patterns, strict conventions, and battle-tested architecture for React + TypeScript projects."}</p>
+    <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-400">
+      {"Production-ready patterns, conventions, and copy-paste code for React + TypeScript. Everything you need to build scalable apps — without the research."}
+    </p>
 
     <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-      <a href="/docs/getting-started/tech-stack" className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">{"Get Started →"}</a>
-      <a href="https://github.com/milos-micke-mitrovic/react-blueprint" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-6 py-3 text-base font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">{"GitHub ↗"}</a>
+      <a href="/docs/getting-started/tech-stack" className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-8 py-3.5 text-base font-semibold text-white shadow-lg transition-all hover:bg-orange-600 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+        {"Start Building →"}
+      </a>
+      <a href="/docs/templates" className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-8 py-3.5 text-base font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+        {"Browse Templates"}
+      </a>
     </div>
   </div>
 </div>
 
-<div className="mx-auto mt-16 max-w-5xl">
-  <div className="grid gap-6 sm:grid-cols-3">
+<div className="mx-auto mt-20 max-w-5xl">
+  <div className="text-center mb-12">
+    <h2 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">{"What You Get"}</h2>
+    <p className="mt-3 text-gray-600 dark:text-gray-400">{"Everything to go from zero to production-ready"}</p>
+  </div>
+
+  <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
     <div className="feature-card">
-      <div className="mb-4 text-4xl">{"📦"}</div>
-      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"16 Sections"}</h3>
-      <span className="text-sm text-gray-600 dark:text-gray-400">{"From project structure to accessibility — everything you need for production apps."}</span>
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
+        <span className="text-2xl">{"🏗️"}</span>
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"Project Architecture"}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{"Feature-based folder structure, naming conventions, and organization patterns that scale."}</p>
     </div>
 
     <div className="feature-card">
-      <div className="mb-4 text-4xl">{"📋"}</div>
-      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"Copy-Paste Ready"}</h3>
-      <span className="text-sm text-gray-600 dark:text-gray-400">{"Working code examples for every pattern. Just copy and adapt to your project."}</span>
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+        <span className="text-2xl">{"📦"}</span>
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"Curated Tech Stack"}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{"React 18, TypeScript, Vite, Tailwind, Zustand, TanStack Query — the tools that matter."}</p>
     </div>
 
     <div className="feature-card">
-      <div className="mb-4 text-4xl">{"⚡"}</div>
-      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"Modern Stack"}</h3>
-      <span className="text-sm text-gray-600 dark:text-gray-400">{"React 18, TypeScript, Zustand, TanStack Query, and more modern tools."}</span>
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+        <span className="text-2xl">{"📋"}</span>
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"Copy-Paste Templates"}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{"Ready-to-use hooks, utilities, and components. Login forms, data tables, auth providers."}</p>
+    </div>
+
+    <div className="feature-card">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+        <span className="text-2xl">{"🎯"}</span>
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"State Management"}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{"Clear guidance on when to use Zustand vs TanStack Query. No more Redux confusion."}</p>
+    </div>
+
+    <div className="feature-card">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
+        <span className="text-2xl">{"🧪"}</span>
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"Testing Patterns"}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{"Vitest, Testing Library, and Playwright. Learn what to test and how to test it."}</p>
+    </div>
+
+    <div className="feature-card">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+        <span className="text-2xl">{"📱"}</span>
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{"Mobile Deployment"}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{"Ship to iOS and Android with Capacitor. Keep your React codebase, reach app stores."}</p>
     </div>
   </div>
 </div>
 
-<div className="mx-auto mt-20 max-w-3xl">
+<div className="mx-auto mt-24 max-w-4xl">
+  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-8 dark:border-gray-800 dark:bg-gray-900/50 sm:p-12">
+    <div className="text-center">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">{"Who Is This For?"}</h2>
+      <p className="mt-4 text-gray-600 dark:text-gray-400">{"ReactBlueprint is built for developers who want to ship faster without sacrificing quality."}</p>
+    </div>
 
-## What's Inside
+    <div className="mt-10 grid gap-6 sm:grid-cols-3">
+      <div className="text-center">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+          <span className="text-2xl">{"🚀"}</span>
+        </div>
+        <h3 className="font-semibold text-gray-900 dark:text-white">{"Solo Developers"}</h3>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{"Skip months of trial and error. Use proven patterns from day one."}</p>
+      </div>
 
-<Cards>
-  <Card title="Getting Started" href="/docs/getting-started/tech-stack" />
-  <Card title="Naming Conventions" href="/docs/naming/files-folders" />
-  <Card title="Components" href="/docs/components/component-types" />
-  <Card title="State Management" href="/docs/state/decision-tree" />
-  <Card title="Data Fetching" href="/docs/data-fetching/api-services" />
-  <Card title="TypeScript" href="/docs/typescript/config" />
-  <Card title="Testing" href="/docs/testing/patterns" />
-  <Card title="Performance" href="/docs/performance/optimization" />
-</Cards>
+      <div className="text-center">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+          <span className="text-2xl">{"👥"}</span>
+        </div>
+        <h3 className="font-semibold text-gray-900 dark:text-white">{"Teams"}</h3>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{"Get everyone on the same page with shared conventions and standards."}</p>
+      </div>
 
+      <div className="text-center">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+          <span className="text-2xl">{"📈"}</span>
+        </div>
+        <h3 className="font-semibold text-gray-900 dark:text-white">{"Growing Projects"}</h3>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{"Architecture that scales from MVP to enterprise without rewrites."}</p>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div className="mx-auto mt-20 max-w-2xl text-center">
-  <Callout type="info">{"This guide is opinionated by design. It's based on real-world experience building production React applications at scale."}</Callout>
+<div className="mx-auto mt-24 max-w-4xl">
+  <div className="text-center mb-10">
+    <h2 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">{"Explore the Guide"}</h2>
+  </div>
+
+  <Cards>
+    <Card title="Tech Stack" href="/docs/getting-started/tech-stack" />
+    <Card title="Project Structure" href="/docs/getting-started/project-structure" />
+    <Card title="State Management" href="/docs/state/decision-tree" />
+    <Card title="Templates" href="/docs/templates" />
+    <Card title="Components" href="/docs/components/component-types" />
+    <Card title="Testing" href="/docs/testing/patterns" />
+    <Card title="TypeScript" href="/docs/typescript/patterns" />
+    <Card title="Mobile" href="/docs/mobile" />
+  </Cards>
+</div>
+
+<div className="mx-auto mt-24 max-w-2xl text-center pb-8">
+  <p className="text-sm text-gray-500 dark:text-gray-500">
+    {"Open source and free forever. Built by developers, for developers."}
+  </p>
 </div>

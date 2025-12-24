@@ -1,0 +1,41 @@
+---
+description: Production-ready utility functions for React apps - class merging, date formatting, currency formatting, and string helpers.
+---
+
+# Utilities
+
+Copy-paste utility functions for common operations.
+
+import { Cards, Card } from 'nextra/components'
+
+## Available Utilities
+
+<Cards>
+  <Card title="cn (Class Merge)" href="/docs/templates/utils/cn" />
+  <Card title="Date Formatting" href="/docs/templates/utils/format-date" />
+  <Card title="Currency Formatting" href="/docs/templates/utils/format-currency" />
+  <Card title="String Helpers" href="/docs/templates/utils/string-helpers" />
+</Cards>
+
+## Usage
+
+Place utilities in your `lib` or `utils` folder:
+
+```
+src/
+└── lib/
+    ├── cn.ts
+    ├── formatters.ts
+    ├── string.ts
+    └── index.ts
+```
+
+Export from a barrel file:
+
+```typescript
+// lib/index.ts
+export { cn } from './cn';
+export { formatDate, formatRelativeTime } from './formatters';
+export { formatCurrency } from './formatters';
+export { slugify, truncate, capitalize } from './string';
+```

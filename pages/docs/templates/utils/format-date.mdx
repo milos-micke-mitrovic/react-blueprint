@@ -1,0 +1,201 @@
+---
+description: Date formatting utilities using date-fns for consistent date display.
+---
+
+# Date Formatting
+
+Utilities for formatting dates using date-fns.
+
+## Dependencies
+
+```bash
+npm install date-fns
+```
+
+## Code
+
+```typescript
+// lib/formatters.ts
+import {
+  format,
+  formatDistanceToNow,
+  formatRelative,
+  isToday,
+  isYesterday,
+  isThisWeek,
+  isThisYear,
+} from 'date-fns';
+
+/**
+ * Format a date with a standard format
+ */
+export function formatDate(
+  date: Date | string | number,
+  formatStr: string = 'MMM d, yyyy'
+): string {
+  const d = new Date(date);
+  return format(d, formatStr);
+}
+
+/**
+ * Format a date relative to now (e.g., "3 hours ago")
+ */
+export function formatRelativeTime(date: Date | string | number): string {
+  const d = new Date(date);
+  return formatDistanceToNow(d, { addSuffix: true });
+}
+
+/**
+ * Smart date formatting based on how recent the date is
+ */
+export function formatSmartDate(date: Date | string | number): string {
+  const d = new Date(date);
+
+  if (isToday(d)) {
+    return format(d, "'Today at' h:mm a");
+  }
+
+  if (isYesterday(d)) {
+    return format(d, "'Yesterday at' h:mm a");
+  }
+
+  if (isThisWeek(d)) {
+    return format(d, "EEEE 'at' h:mm a"); // "Monday at 3:30 PM"
+  }
+
+  if (isThisYear(d)) {
+    return format(d, 'MMM d'); // "Jan 15"
+  }
+
+  return format(d, 'MMM d, yyyy'); // "Jan 15, 2024"
+}
+
+/**
+ * Format a date range
+ */
+export function formatDateRange(
+  start: Date | string | number,
+  end: Date | string | number
+): string {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  const startYear = startDate.getFullYear();
+  const endYear = endDate.getFullYear();
+
+  if (startYear === endYear) {
+    return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`;
+  }
+
+  return `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`;
+}
+
+/**
+ * Format for datetime-local input
+ */
+export function formatForInput(date: Date | string | number): string {
+  const d = new Date(date);
+  return format(d, "yyyy-MM-dd'T'HH:mm");
+}
+```
+
+## Usage
+
+### Basic Formatting
+
+```tsx
+import { formatDate, formatRelativeTime } from '@/lib/formatters';
+
+// Standard formats
+formatDate(new Date()); // "Dec 24, 2025"
+formatDate(new Date(), 'MMMM d, yyyy'); // "December 24, 2025"
+formatDate(new Date(), 'MM/dd/yyyy'); // "12/24/2025"
+
+// Relative time
+formatRelativeTime(new Date(Date.now() - 3600000)); // "about 1 hour ago"
+formatRelativeTime(new Date(Date.now() - 86400000)); // "1 day ago"
+```
+
+### In Components
+
+```tsx
+function PostCard({ post }) {
+  return (
+    <article>
+      <h2>{post.title}</h2>
+      <time dateTime={post.createdAt}>
+        {formatRelativeTime(post.createdAt)}
+      </time>
+    </article>
+  );
+}
+```
+
+### Smart Date Display
+
+```tsx
+function CommentList({ comments }) {
+  return (
+    <ul>
+      {comments.map((comment) => (
+        <li key={comment.id}>
+          <p>{comment.text}</p>
+          <span className="text-muted-foreground text-sm">
+            {formatSmartDate(comment.createdAt)}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Date Range
+
+```tsx
+function EventCard({ event }) {
+  return (
+    <div>
+      <h3>{event.name}</h3>
+      <p>{formatDateRange(event.startDate, event.endDate)}</p>
+    </div>
+  );
+}
+
+// Output: "Jan 15 - Jan 20, 2025"
+```
+
+## Common Format Strings
+
+| Format | Output |
+|--------|--------|
+| `'MMM d, yyyy'` | Dec 24, 2025 |
+| `'MMMM d, yyyy'` | December 24, 2025 |
+| `'MM/dd/yyyy'` | 12/24/2025 |
+| `'yyyy-MM-dd'` | 2025-12-24 |
+| `'h:mm a'` | 3:30 PM |
+| `'HH:mm'` | 15:30 |
+| `'EEEE'` | Wednesday |
+| `'EEE'` | Wed |
+| `'MMM d, h:mm a'` | Dec 24, 3:30 PM |
+
+## With Internationalization
+
+For locale-specific formatting:
+
+```typescript
+import { format } from 'date-fns';
+import { de, fr, es } from 'date-fns/locale';
+
+const locales = { de, fr, es };
+
+export function formatDateLocalized(
+  date: Date,
+  formatStr: string,
+  locale: keyof typeof locales = 'en'
+) {
+  return format(date, formatStr, {
+    locale: locales[locale],
+  });
+}
+```

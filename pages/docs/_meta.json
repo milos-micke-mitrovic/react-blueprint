@@ -1,15 +1,4 @@
 {
-  "---": {
-    "type": "separator",
-    "title": "Overview"
-  },
-  "quick-reference": "Quick Reference",
-  "examples": "Examples",
-  "faq": "FAQ",
-  "----": {
-    "type": "separator",
-    "title": "Guide"
-  },
   "getting-started": "Getting Started",
   "naming": "Naming Conventions",
   "components": "Components",
@@ -24,5 +13,11 @@
   "git": "Git Workflow",
   "documentation": "Documentation",
   "security": "Security",
-  "accessibility": "Accessibility"
+  "accessibility": "Accessibility",
+  "mobile": "Mobile",
+  "---": {
+    "type": "separator",
+    "title": "Resources"
+  },
+  "templates": "Templates"
 }
