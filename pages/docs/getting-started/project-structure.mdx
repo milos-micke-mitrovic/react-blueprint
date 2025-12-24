@@ -13,38 +13,236 @@ import { Callout, FileTree, Steps } from 'nextra/components'
 <FileTree>
   <FileTree.Folder name="src" defaultOpen>
     <FileTree.Folder name="app">
-      <FileTree.Folder name="providers" />
-      <FileTree.Folder name="router" />
+      <FileTree.Folder name="providers">
+        <FileTree.File name="AppProviders.tsx" />
+        <FileTree.File name="QueryProvider.tsx" />
+        <FileTree.File name="ThemeProvider.tsx" />
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="router">
+        <FileTree.File name="AppRouter.tsx" />
+        <FileTree.File name="routes.tsx" />
+        <FileTree.File name="ProtectedRoute.tsx" />
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
       <FileTree.File name="App.tsx" />
     </FileTree.Folder>
     <FileTree.Folder name="components">
-      <FileTree.Folder name="ui" />
-      <FileTree.Folder name="layout" />
-      <FileTree.Folder name="common" />
-    </FileTree.Folder>
-    <FileTree.Folder name="features" defaultOpen>
-      <FileTree.Folder name="auth">
-        <FileTree.Folder name="components" />
-        <FileTree.Folder name="hooks" />
-        <FileTree.Folder name="services" />
-        <FileTree.Folder name="stores" />
-        <FileTree.Folder name="types" />
+      <FileTree.Folder name="ui">
+        <FileTree.Folder name="button">
+          <FileTree.File name="Button.tsx" />
+          <FileTree.File name="Button.test.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="input">
+          <FileTree.File name="Input.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="modal">
+          <FileTree.File name="Modal.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="card">
+          <FileTree.File name="Card.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="dropdown">
+          <FileTree.File name="Dropdown.tsx" />
+          <FileTree.File name="DropdownItem.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="data-table">
+          <FileTree.File name="DataTable.tsx" />
+          <FileTree.File name="DataTableHeader.tsx" />
+          <FileTree.File name="DataTableRow.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
         <FileTree.File name="index.ts" />
       </FileTree.Folder>
-      <FileTree.Folder name="users" />
+      <FileTree.Folder name="layout">
+        <FileTree.File name="Header.tsx" />
+        <FileTree.File name="Footer.tsx" />
+        <FileTree.File name="Sidebar.tsx" />
+        <FileTree.File name="MainLayout.tsx" />
+        <FileTree.File name="AuthLayout.tsx" />
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="common">
+        <FileTree.Folder name="error-boundary">
+          <FileTree.File name="ErrorBoundary.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.File name="LoadingSpinner.tsx" />
+        <FileTree.File name="EmptyState.tsx" />
+        <FileTree.File name="Pagination.tsx" />
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
     </FileTree.Folder>
-    <FileTree.Folder name="hooks" />
-    <FileTree.Folder name="lib" />
-    <FileTree.Folder name="services" />
-    <FileTree.Folder name="stores" />
-    <FileTree.Folder name="types" />
-    <FileTree.Folder name="utils" />
-    <FileTree.Folder name="constants" />
-    <FileTree.Folder name="assets" />
-    <FileTree.Folder name="styles" />
+    <FileTree.Folder name="features">
+      <FileTree.Folder name="auth">
+        <FileTree.Folder name="components">
+          <FileTree.File name="LoginForm.tsx" />
+          <FileTree.File name="SignupForm.tsx" />
+          <FileTree.File name="ForgotPasswordForm.tsx" />
+          <FileTree.File name="ResetPasswordForm.tsx" />
+          <FileTree.File name="SocialLoginButtons.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="hooks">
+          <FileTree.File name="useAuth.ts" />
+          <FileTree.File name="useLogin.ts" />
+          <FileTree.File name="useLogout.ts" />
+          <FileTree.File name="useSignup.ts" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="services">
+          <FileTree.File name="authService.ts" />
+          <FileTree.File name="tokenService.ts" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="stores">
+          <FileTree.File name="authStore.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="types">
+          <FileTree.File name="auth.types.ts" />
+        </FileTree.Folder>
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="users">
+        <FileTree.Folder name="components">
+          <FileTree.File name="UserCard.tsx" />
+          <FileTree.File name="UserList.tsx" />
+          <FileTree.File name="UserProfile.tsx" />
+          <FileTree.File name="UserAvatar.tsx" />
+          <FileTree.File name="EditUserForm.tsx" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="hooks">
+          <FileTree.File name="useUsers.ts" />
+          <FileTree.File name="useUser.ts" />
+          <FileTree.File name="useUpdateUser.ts" />
+          <FileTree.File name="useDeleteUser.ts" />
+          <FileTree.File name="index.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="services">
+          <FileTree.File name="userService.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="types">
+          <FileTree.File name="user.types.ts" />
+        </FileTree.Folder>
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="dashboard">
+        <FileTree.Folder name="components" />
+        <FileTree.Folder name="hooks" />
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="settings">
+        <FileTree.Folder name="components" />
+        <FileTree.Folder name="hooks" />
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
+    </FileTree.Folder>
+    <FileTree.Folder name="hooks">
+      <FileTree.File name="useDebounce.ts" />
+      <FileTree.File name="useLocalStorage.ts" />
+      <FileTree.File name="useMediaQuery.ts" />
+      <FileTree.File name="useOnClickOutside.ts" />
+      <FileTree.File name="usePrevious.ts" />
+      <FileTree.File name="useToggle.ts" />
+      <FileTree.File name="index.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="lib">
+      <FileTree.File name="apiClient.ts" />
+      <FileTree.File name="queryClient.ts" />
+      <FileTree.File name="cn.ts" />
+      <FileTree.File name="formatters.ts" />
+      <FileTree.File name="validators.ts" />
+      <FileTree.File name="index.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="services">
+      <FileTree.File name="api.ts" />
+      <FileTree.File name="storage.ts" />
+      <FileTree.File name="analytics.ts" />
+      <FileTree.File name="index.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="stores">
+      <FileTree.File name="uiStore.ts" />
+      <FileTree.File name="themeStore.ts" />
+      <FileTree.File name="index.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="types">
+      <FileTree.File name="api.types.ts" />
+      <FileTree.File name="common.types.ts" />
+      <FileTree.File name="index.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="utils">
+      <FileTree.File name="date.ts" />
+      <FileTree.File name="string.ts" />
+      <FileTree.File name="number.ts" />
+      <FileTree.File name="array.ts" />
+      <FileTree.File name="object.ts" />
+      <FileTree.File name="index.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="constants">
+      <FileTree.File name="routes.ts" />
+      <FileTree.File name="queryKeys.ts" />
+      <FileTree.File name="config.ts" />
+      <FileTree.File name="index.ts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="assets">
+      <FileTree.Folder name="images">
+        <FileTree.File name="logo.svg" />
+        <FileTree.File name="hero.png" />
+      </FileTree.Folder>
+      <FileTree.Folder name="icons">
+        <FileTree.File name="index.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="fonts" />
+    </FileTree.Folder>
+    <FileTree.Folder name="styles">
+      <FileTree.File name="globals.css" />
+      <FileTree.File name="variables.css" />
+      <FileTree.File name="reset.css" />
+      <FileTree.File name="typography.css" />
+      <FileTree.File name="utilities.css" />
+    </FileTree.Folder>
     <FileTree.File name="main.tsx" />
+    <FileTree.File name="vite-env.d.ts" />
   </FileTree.Folder>
+  <FileTree.Folder name="public">
+    <FileTree.File name="favicon.ico" />
+    <FileTree.File name="robots.txt" />
+    <FileTree.File name="manifest.json" />
+  </FileTree.Folder>
+  <FileTree.File name="index.html" />
+  <FileTree.File name="package.json" />
+  <FileTree.File name="tsconfig.json" />
+  <FileTree.File name="vite.config.ts" />
+  <FileTree.File name="tailwind.config.js" />
+  <FileTree.File name=".eslintrc.cjs" />
+  <FileTree.File name=".prettierrc" />
+  <FileTree.File name=".env.example" />
 </FileTree>
+
+## Folder Purposes
+
+| Folder | Purpose |
+|--------|---------|
+| `app/` | Application shell - providers, router, main App component |
+| `components/ui/` | Reusable UI primitives (Button, Input, Modal) |
+| `components/layout/` | Page layouts and structural components |
+| `components/common/` | Shared components used across features |
+| `features/` | Feature modules - self-contained business logic |
+| `hooks/` | Shared custom hooks (not feature-specific) |
+| `lib/` | Third-party library configurations and wrappers |
+| `services/` | API clients, external service integrations |
+| `stores/` | Global Zustand stores (not feature-specific) |
+| `types/` | Shared TypeScript types and interfaces |
+| `utils/` | Pure utility functions (date, string, array helpers) |
+| `constants/` | Application constants, route paths, query keys |
+| `assets/` | Static assets - images, icons, fonts |
+| `styles/` | Global CSS, variables, resets |
 
 ## Structure Rules
 
@@ -60,16 +258,16 @@ Each feature module is self-contained with its own components, hooks, services, 
       <FileTree.File name="LoginForm.tsx" />
       <FileTree.File name="SignupForm.tsx" />
     </FileTree.Folder>
-    <FileTree.Folder name="hooks">
+    <FileTree.Folder name="hooks" defaultOpen>
       <FileTree.File name="useAuth.ts" />
     </FileTree.Folder>
-    <FileTree.Folder name="services">
+    <FileTree.Folder name="services" defaultOpen>
       <FileTree.File name="authService.ts" />
     </FileTree.Folder>
-    <FileTree.Folder name="stores">
+    <FileTree.Folder name="stores" defaultOpen>
       <FileTree.File name="authStore.ts" />
     </FileTree.Folder>
-    <FileTree.Folder name="types">
+    <FileTree.Folder name="types" defaultOpen>
       <FileTree.File name="auth.types.ts" />
     </FileTree.Folder>
     <FileTree.File name="index.ts" />
@@ -94,7 +292,7 @@ export type { User, AuthState } from './types/auth.types';
 Keep tests and styles next to components:
 
 <FileTree>
-  <FileTree.Folder name="components/Button" defaultOpen>
+  <FileTree.Folder name="components/ui/button" defaultOpen>
     <FileTree.File name="Button.tsx" />
     <FileTree.File name="Button.test.tsx" />
     <FileTree.File name="Button.stories.tsx" />
