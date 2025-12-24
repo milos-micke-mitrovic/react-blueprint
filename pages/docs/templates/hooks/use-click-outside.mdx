@@ -1,0 +1,167 @@
+---
+description: useClickOutside hook for detecting clicks outside an element - perfect for dropdowns, modals, and popovers.
+---
+
+# useClickOutside
+
+Detect clicks outside a referenced element.
+
+## Use Cases
+
+- Close dropdowns when clicking outside
+- Dismiss modals on backdrop click
+- Close popovers and tooltips
+- Deselect items when clicking away
+
+## Code
+
+```typescript
+import { useEffect, useRef, RefObject } from 'react';
+
+export function useClickOutside<T extends HTMLElement = HTMLElement>(
+  handler: () => void,
+  enabled: boolean = true
+): RefObject<T> {
+  const ref = useRef<T>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+
+      if (ref.current && !ref.current.contains(target)) {
+        handler();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
+  }, [handler, enabled]);
+
+  return ref;
+}
+```
+
+## Usage
+
+### Dropdown Menu
+
+```tsx
+import { useState } from 'react';
+import { useClickOutside } from '@/hooks/useClickOutside';
+
+function Dropdown() {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useClickOutside<HTMLDivElement>(() => setIsOpen(false), isOpen);
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setIsOpen(!isOpen)}>
+        Menu
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full mt-2 w-48 rounded-md border bg-white shadow-lg">
+          <a href="#" className="block px-4 py-2 hover:bg-gray-100">Option 1</a>
+          <a href="#" className="block px-4 py-2 hover:bg-gray-100">Option 2</a>
+          <a href="#" className="block px-4 py-2 hover:bg-gray-100">Option 3</a>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Modal with Backdrop
+
+```tsx
+function Modal({ isOpen, onClose, children }) {
+  const ref = useClickOutside<HTMLDivElement>(onClose, isOpen);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div
+        ref={ref}
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+```
+
+### Search with Suggestions
+
+```tsx
+function SearchWithSuggestions() {
+  const [query, setQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const ref = useClickOutside<HTMLDivElement>(
+    () => setShowSuggestions(false),
+    showSuggestions
+  );
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setShowSuggestions(true)}
+        placeholder="Search..."
+      />
+
+      {showSuggestions && query && (
+        <ul className="absolute top-full mt-1 w-full rounded-md border bg-white shadow-lg">
+          <li className="px-4 py-2 hover:bg-gray-100">Suggestion 1</li>
+          <li className="px-4 py-2 hover:bg-gray-100">Suggestion 2</li>
+        </ul>
+      )}
+    </div>
+  );
+}
+```
+
+## Variant: Multiple Refs
+
+Handle multiple elements that should not trigger close:
+
+```typescript
+export function useClickOutsideMultiple<T extends HTMLElement = HTMLElement>(
+  refs: RefObject<T>[],
+  handler: () => void,
+  enabled: boolean = true
+): void {
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+
+      const isOutside = refs.every(
+        (ref) => ref.current && !ref.current.contains(target)
+      );
+
+      if (isOutside) {
+        handler();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
+  }, [refs, handler, enabled]);
+}
+```

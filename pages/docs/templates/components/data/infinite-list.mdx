@@ -1,0 +1,426 @@
+---
+description: Production-ready infinite scroll list with TanStack Query, intersection observer, and virtualization support.
+---
+
+# Infinite List
+
+A performant infinite scroll implementation with TanStack Query and intersection observer.
+
+import { Callout, Tabs, Tab } from 'nextra/components'
+
+## Overview
+
+This template provides:
+- Infinite scroll with TanStack Query
+- Intersection observer for scroll detection
+- Loading states and error handling
+- Pull-to-refresh support
+- Optional virtualization for large lists
+- Skeleton loading placeholders
+
+## Dependencies
+
+```bash
+npm install @tanstack/react-query
+```
+
+For virtualization (optional):
+```bash
+npm install @tanstack/react-virtual
+```
+
+## Code
+
+<Tabs items={['InfiniteList.tsx', 'useInfiniteItems.ts', 'ItemCard.tsx', 'Usage']}>
+  <Tab>
+```tsx
+import { useRef, useCallback, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+
+interface InfiniteListProps<T> {
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  keyExtractor: (item: T) => string;
+  onLoadMore: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  error?: Error | null;
+  emptyMessage?: string;
+  loadingComponent?: React.ReactNode;
+  errorComponent?: React.ReactNode;
+  className?: string;
+}
+
+export function InfiniteList<T>({
+  items,
+  renderItem,
+  keyExtractor,
+  onLoadMore,
+  hasNextPage,
+  isFetchingNextPage,
+  isLoading,
+  isError,
+  error,
+  emptyMessage = 'No items found',
+  loadingComponent,
+  errorComponent,
+  className,
+}: InfiniteListProps<T>) {
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const lastItemRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isFetchingNextPage) return;
+
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && hasNextPage) {
+            onLoadMore();
+          }
+        },
+        { threshold: 0.1, rootMargin: '100px' }
+      );
+
+      if (node) {
+        observerRef.current.observe(node);
+      }
+    },
+    [isFetchingNextPage, hasNextPage, onLoadMore]
+  );
+
+  // Cleanup observer on unmount
+  useEffect(() => {
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Initial loading state
+  if (isLoading) {
+    return loadingComponent ?? <LoadingSkeletons count={5} />;
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      errorComponent ?? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-red-500">Failed to load items</p>
+          <p className="text-sm text-muted-foreground">{error?.message}</p>
+        </div>
+      )
+    );
+  }
+
+  // Empty state
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-muted-foreground">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      {items.map((item, index) => (
+        <div
+          key={keyExtractor(item)}
+          ref={index === items.length - 1 ? lastItemRef : undefined}
+        >
+          {renderItem(item, index)}
+        </div>
+      ))}
+
+      {/* Loading indicator for next page */}
+      {isFetchingNextPage && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* End of list indicator */}
+      {!hasNextPage && items.length > 0 && (
+        <p className="py-4 text-center text-sm text-muted-foreground">
+          No more items to load
+        </p>
+      )}
+    </div>
+  );
+}
+
+function LoadingSkeletons({ count }: { count: number }) {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="h-24 animate-pulse rounded-lg bg-muted"
+        />
+      ))}
+    </div>
+  );
+}
+```
+  </Tab>
+  <Tab>
+```tsx
+import { useInfiniteQuery } from '@tanstack/react-query';
+
+interface PaginatedResponse<T> {
+  items: T[];
+  nextCursor?: string;
+  hasMore: boolean;
+}
+
+interface UseInfiniteItemsOptions {
+  limit?: number;
+  filter?: string;
+}
+
+export function useInfiniteItems<T>(
+  queryKey: string[],
+  fetchFn: (cursor?: string, limit?: number) => Promise<PaginatedResponse<T>>,
+  options: UseInfiniteItemsOptions = {}
+) {
+  const { limit = 20 } = options;
+
+  const query = useInfiniteQuery({
+    queryKey: [...queryKey, options],
+    queryFn: ({ pageParam }) => fetchFn(pageParam, limit),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
+  });
+
+  // Flatten all pages into single array
+  const items = query.data?.pages.flatMap((page) => page.items) ?? [];
+
+  return {
+    items,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refetch: query.refetch,
+  };
+}
+
+// Example API function
+export async function fetchPosts(
+  cursor?: string,
+  limit = 20
+): Promise<PaginatedResponse<Post>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+
+  const response = await fetch(`/api/posts?${params}`);
+  return response.json();
+}
+
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  author: { name: string; avatar: string };
+  createdAt: string;
+}
+```
+  </Tab>
+  <Tab>
+```tsx
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
+
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  author: { name: string; avatar: string };
+  createdAt: string;
+}
+
+interface PostCardProps {
+  post: Post;
+}
+
+export function PostCard({ post }: PostCardProps) {
+  return (
+    <Card className="mb-4">
+      <CardHeader className="flex flex-row items-center gap-3 pb-2">
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={post.author.avatar} />
+          <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <p className="font-medium">{post.author.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+          </p>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <h3 className="mb-2 font-semibold">{post.title}</h3>
+        <p className="text-muted-foreground">{post.content}</p>
+      </CardContent>
+    </Card>
+  );
+}
+```
+  </Tab>
+  <Tab>
+```tsx
+// pages/feed.tsx
+import { InfiniteList } from '@/components/InfiniteList';
+import { PostCard } from '@/components/PostCard';
+import { useInfiniteItems, fetchPosts, type Post } from '@/hooks/useInfiniteItems';
+
+export default function FeedPage() {
+  const {
+    items,
+    isLoading,
+    isError,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteItems<Post>(['posts'], fetchPosts);
+
+  return (
+    <div className="container max-w-2xl py-8">
+      <h1 className="mb-6 text-3xl font-bold">Feed</h1>
+
+      <InfiniteList
+        items={items}
+        renderItem={(post) => <PostCard post={post} />}
+        keyExtractor={(post) => post.id}
+        onLoadMore={fetchNextPage}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        emptyMessage="No posts yet. Be the first to post!"
+      />
+    </div>
+  );
+}
+```
+  </Tab>
+</Tabs>
+
+## Virtualization
+
+For very large lists (1000+ items), add virtualization to render only visible items:
+
+```tsx
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useRef } from 'react';
+
+function VirtualizedList<T>({
+  items,
+  renderItem,
+  estimateSize = 100,
+}: {
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  estimateSize?: number;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => estimateSize,
+    overscan: 5,
+  });
+
+  return (
+    <div ref={parentRef} className="h-[600px] overflow-auto">
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          position: 'relative',
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => (
+          <div
+            key={virtualItem.key}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              transform: `translateY(${virtualItem.start}px)`,
+            }}
+          >
+            {renderItem(items[virtualItem.index], virtualItem.index)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Pull to Refresh
+
+Add pull-to-refresh functionality:
+
+```tsx
+import { useCallback, useState } from 'react';
+
+function usePullToRefresh(onRefresh: () => Promise<void>) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [onRefresh]);
+
+  return { isRefreshing, handleRefresh };
+}
+
+// Usage with react-pull-to-refresh or similar library
+```
+
+## API Response Format
+
+The infinite query expects this response format:
+
+```typescript
+interface PaginatedResponse<T> {
+  items: T[];          // Array of items for current page
+  nextCursor?: string; // Cursor for next page (undefined if no more)
+  hasMore: boolean;    // Whether more items exist
+}
+```
+
+### Cursor vs Offset Pagination
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Cursor | Consistent with real-time data, performant | Complex to implement |
+| Offset | Simple, jump to any page | Inconsistent with changing data |
+
+<Callout type="info">Use cursor-based pagination for infinite scroll. Offset pagination can cause duplicate or missing items when data changes.</Callout>
+
+## Related
+
+- [Data Table](/docs/templates/components/data/data-table) - Paginated table view
+- [Search with Filters](/docs/templates/components/data/search-filters) - Filtering with infinite scroll

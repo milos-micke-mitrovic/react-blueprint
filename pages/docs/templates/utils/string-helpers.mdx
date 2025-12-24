@@ -1,0 +1,231 @@
+---
+description: String utility functions for slugifying, truncating, capitalizing, and more.
+---
+
+# String Helpers
+
+Common string manipulation utilities.
+
+## Code
+
+```typescript
+// lib/string.ts
+
+/**
+ * Convert a string to a URL-friendly slug
+ */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')    // Remove non-word chars
+    .replace(/[\s_-]+/g, '-')    // Replace spaces and underscores with hyphens
+    .replace(/^-+|-+$/g, '');    // Remove leading/trailing hyphens
+}
+
+/**
+ * Truncate text to a maximum length with ellipsis
+ */
+export function truncate(
+  text: string,
+  maxLength: number,
+  suffix: string = '...'
+): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return text.slice(0, maxLength - suffix.length).trim() + suffix;
+}
+
+/**
+ * Truncate text at word boundary
+ */
+export function truncateWords(
+  text: string,
+  maxLength: number,
+  suffix: string = '...'
+): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  const truncated = text.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+
+  if (lastSpace === -1) {
+    return truncated + suffix;
+  }
+
+  return truncated.slice(0, lastSpace) + suffix;
+}
+
+/**
+ * Capitalize the first letter of a string
+ */
+export function capitalize(text: string): string {
+  if (!text) return '';
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * Convert to title case
+ */
+export function titleCase(text: string): string {
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map((word) => capitalize(word))
+    .join(' ');
+}
+
+/**
+ * Convert camelCase or PascalCase to readable text
+ */
+export function humanize(text: string): string {
+  return text
+    .replace(/([A-Z])/g, ' $1')  // Add space before capitals
+    .replace(/[_-]/g, ' ')       // Replace underscores and hyphens
+    .replace(/\s+/g, ' ')        // Normalize spaces
+    .trim()
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
+}
+
+/**
+ * Generate initials from a name
+ */
+export function getInitials(name: string, maxLength: number = 2): string {
+  return name
+    .split(' ')
+    .map((word) => word[0])
+    .filter(Boolean)
+    .slice(0, maxLength)
+    .join('')
+    .toUpperCase();
+}
+
+/**
+ * Pluralize a word based on count
+ */
+export function pluralize(
+  count: number,
+  singular: string,
+  plural?: string
+): string {
+  if (count === 1) {
+    return singular;
+  }
+  return plural ?? `${singular}s`;
+}
+
+/**
+ * Strip HTML tags from a string
+ */
+export function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '');
+}
+```
+
+## Usage
+
+### Slugify
+
+```tsx
+slugify('Hello World!');           // "hello-world"
+slugify('This is a TEST');         // "this-is-a-test"
+slugify('Café & Restaurant');      // "caf-restaurant"
+slugify('  Multiple   Spaces  ');  // "multiple-spaces"
+
+// For URL generation
+const slug = slugify(post.title);
+const url = `/blog/${slug}`;
+```
+
+### Truncate
+
+```tsx
+truncate('This is a long text that needs truncating', 20);
+// "This is a long te..."
+
+truncateWords('This is a long text that needs truncating', 20);
+// "This is a long..."
+
+// In a component
+function PostExcerpt({ content }) {
+  return (
+    <p className="text-muted-foreground">
+      {truncateWords(content, 150)}
+    </p>
+  );
+}
+```
+
+### Capitalize & Title Case
+
+```tsx
+capitalize('hello');        // "Hello"
+titleCase('hello world');   // "Hello World"
+titleCase('THE QUICK FOX'); // "The Quick Fox"
+
+// For labels
+<label>{titleCase(field.name)}</label>
+```
+
+### Humanize
+
+```tsx
+humanize('firstName');       // "First name"
+humanize('createdAt');       // "Created at"
+humanize('user_settings');   // "User settings"
+humanize('APIResponse');     // "Api response"
+
+// For automatic field labels
+Object.keys(data).map((key) => (
+  <div key={key}>
+    <label>{humanize(key)}</label>
+    <span>{data[key]}</span>
+  </div>
+));
+```
+
+### Initials
+
+```tsx
+getInitials('John Doe');           // "JD"
+getInitials('John');               // "J"
+getInitials('John Paul Smith');    // "JP"
+getInitials('John Paul Smith', 3); // "JPS"
+
+// In avatar component
+function Avatar({ name }) {
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
+      {getInitials(name)}
+    </div>
+  );
+}
+```
+
+### Pluralize
+
+```tsx
+pluralize(1, 'item');              // "item"
+pluralize(5, 'item');              // "items"
+pluralize(1, 'child', 'children'); // "child"
+pluralize(3, 'child', 'children'); // "children"
+
+// In UI
+<span>{count} {pluralize(count, 'result')}</span>
+// "1 result" or "5 results"
+```
+
+### Strip HTML
+
+```tsx
+stripHtml('<p>Hello <strong>World</strong></p>');
+// "Hello World"
+
+// For plain text excerpts from rich content
+const plainText = stripHtml(post.content);
+const excerpt = truncateWords(plainText, 150);
+```

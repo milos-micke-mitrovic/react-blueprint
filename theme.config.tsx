@@ -49,7 +49,17 @@ const config: DocsThemeConfig = {
     text: null,
   },
   footer: {
-    text: '© 2026 ReactBlueprint. MIT License.',
+    text: (
+      <div className="flex w-full flex-col items-center gap-2 sm:flex-row sm:justify-between">
+        <span>© 2026 ReactBlueprint. MIT License.</span>
+        <a
+          href="mailto:milos.micke.mitrovic@gmail.com"
+          className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          milos.micke.mitrovic@gmail.com
+        </a>
+      </div>
+    ),
   },
   main: ({ children }) => (
     <>

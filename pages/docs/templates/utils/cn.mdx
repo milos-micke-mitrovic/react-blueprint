@@ -1,0 +1,134 @@
+---
+description: cn utility for merging Tailwind CSS classes with conditional support.
+---
+
+# cn (Class Merge)
+
+Merge Tailwind CSS classes with proper conflict resolution.
+
+import { Callout } from 'nextra/components'
+
+## Why cn?
+
+When building reusable components, you often need to:
+- Apply conditional classes
+- Allow class overrides via props
+- Merge classes without conflicts
+
+`tailwind-merge` resolves Tailwind class conflicts (e.g., `px-2` vs `px-4`), and `clsx` handles conditional classes. Together they're the standard pattern.
+
+## Dependencies
+
+```bash
+npm install clsx tailwind-merge
+```
+
+## Code
+
+```typescript
+// lib/cn.ts
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}
+```
+
+## Usage
+
+### Basic Usage
+
+```tsx
+import { cn } from '@/lib/cn';
+
+// Simple merge
+cn('px-4 py-2', 'bg-blue-500');
+// → 'px-4 py-2 bg-blue-500'
+
+// Conditional classes
+cn('px-4', isActive && 'bg-blue-500', isDisabled && 'opacity-50');
+// → 'px-4 bg-blue-500' (if isActive is true)
+
+// Override classes (tailwind-merge handles conflicts)
+cn('px-4 py-2', 'px-8');
+// → 'py-2 px-8' (px-8 overrides px-4)
+```
+
+### In Components
+
+```tsx
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+function Button({
+  variant = 'primary',
+  size = 'md',
+  className,
+  ...props
+}: ButtonProps) {
+  return (
+    <button
+      className={cn(
+        // Base styles
+        'inline-flex items-center justify-center rounded-md font-medium transition-colors',
+        // Variant styles
+        variant === 'primary' && 'bg-blue-600 text-white hover:bg-blue-700',
+        variant === 'secondary' && 'bg-gray-200 text-gray-900 hover:bg-gray-300',
+        // Size styles
+        size === 'sm' && 'h-8 px-3 text-sm',
+        size === 'md' && 'h-10 px-4',
+        size === 'lg' && 'h-12 px-6 text-lg',
+        // Allow override via className prop
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+// Usage - className can override any style
+<Button className="bg-red-500 hover:bg-red-600">Custom Color</Button>
+```
+
+### With Objects
+
+```tsx
+cn({
+  'bg-blue-500': isActive,
+  'bg-gray-500': !isActive,
+  'opacity-50 cursor-not-allowed': isDisabled,
+});
+```
+
+### With Arrays
+
+```tsx
+cn([
+  'base-class',
+  condition && 'conditional-class',
+  anotherCondition && 'another-class',
+]);
+```
+
+## How tailwind-merge Works
+
+<Callout>tailwind-merge understands Tailwind's class structure and removes conflicting classes intelligently.</Callout>
+
+```tsx
+// Without tailwind-merge (clsx only)
+clsx('px-4', 'px-8'); // → 'px-4 px-8' ❌ Both applied
+
+// With tailwind-merge
+twMerge('px-4', 'px-8'); // → 'px-8' ✅ Later wins
+
+// Complex conflicts resolved
+twMerge('p-4', 'px-8'); // → 'p-4 px-8' ✅ px overrides p-x only
+twMerge('text-red-500', 'text-blue-500'); // → 'text-blue-500' ✅
+```
+
+## shadcn/ui
+
+This is exactly the pattern shadcn/ui uses. When you run `npx shadcn-ui@latest init`, it creates this utility for you automatically.

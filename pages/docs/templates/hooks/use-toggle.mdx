@@ -1,0 +1,156 @@
+---
+description: useToggle hook for boolean state with convenient toggle function.
+---
+
+# useToggle
+
+Simple boolean state with toggle, on, and off functions.
+
+## Use Cases
+
+- Modal open/close
+- Sidebar expand/collapse
+- Show/hide password
+- Toggle switches
+
+## Code
+
+```typescript
+import { useState, useCallback } from 'react';
+
+interface UseToggleReturn {
+  value: boolean;
+  toggle: () => void;
+  setTrue: () => void;
+  setFalse: () => void;
+  setValue: (value: boolean) => void;
+}
+
+export function useToggle(initialValue: boolean = false): UseToggleReturn {
+  const [value, setValue] = useState(initialValue);
+
+  const toggle = useCallback(() => setValue((v) => !v), []);
+  const setTrue = useCallback(() => setValue(true), []);
+  const setFalse = useCallback(() => setValue(false), []);
+
+  return { value, toggle, setTrue, setFalse, setValue };
+}
+```
+
+## Usage
+
+### Modal
+
+```tsx
+function App() {
+  const modal = useToggle();
+
+  return (
+    <>
+      <button onClick={modal.setTrue}>Open Modal</button>
+
+      {modal.value && (
+        <Modal onClose={modal.setFalse}>
+          <h2>Modal Content</h2>
+          <button onClick={modal.setFalse}>Close</button>
+        </Modal>
+      )}
+    </>
+  );
+}
+```
+
+### Password Visibility
+
+```tsx
+function PasswordInput() {
+  const showPassword = useToggle();
+
+  return (
+    <div className="relative">
+      <input
+        type={showPassword.value ? 'text' : 'password'}
+        placeholder="Password"
+      />
+      <button
+        type="button"
+        onClick={showPassword.toggle}
+        className="absolute right-2 top-1/2 -translate-y-1/2"
+      >
+        {showPassword.value ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+  );
+}
+```
+
+### Sidebar
+
+```tsx
+function Layout({ children }) {
+  const sidebar = useToggle(true);
+
+  return (
+    <div className="flex">
+      {sidebar.value && (
+        <aside className="w-64 border-r p-4">
+          Navigation
+        </aside>
+      )}
+      <main className="flex-1 p-4">
+        <button onClick={sidebar.toggle}>
+          {sidebar.value ? 'Hide' : 'Show'} Sidebar
+        </button>
+        {children}
+      </main>
+    </div>
+  );
+}
+```
+
+### Expandable Section
+
+```tsx
+function Accordion({ title, children }) {
+  const expanded = useToggle();
+
+  return (
+    <div className="border-b">
+      <button
+        onClick={expanded.toggle}
+        className="flex w-full items-center justify-between py-4"
+      >
+        <span>{title}</span>
+        <ChevronDown
+          className={`h-4 w-4 transition-transform ${
+            expanded.value ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+      {expanded.value && (
+        <div className="pb-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Simple Array Version
+
+If you prefer array destructuring:
+
+```typescript
+export function useToggle(
+  initialValue: boolean = false
+): [boolean, () => void, (value: boolean) => void] {
+  const [value, setValue] = useState(initialValue);
+  const toggle = useCallback(() => setValue((v) => !v), []);
+
+  return [value, toggle, setValue];
+}
+
+// Usage
+const [isOpen, toggleOpen, setOpen] = useToggle();
+```

@@ -1,0 +1,181 @@
+---
+description: useLocalStorage hook for persisting state in localStorage with TypeScript support.
+---
+
+# useLocalStorage
+
+Persist state in localStorage with automatic JSON serialization.
+
+## Use Cases
+
+- User preferences (theme, language)
+- Form draft saving
+- Shopping cart persistence
+- Recently viewed items
+
+## Code
+
+```typescript
+import { useState, useEffect, useCallback } from 'react';
+
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T
+): [T, (value: T | ((prev: T) => T)) => void, () => void] {
+  // Get initial value from localStorage or use provided initial value
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    if (typeof window === 'undefined') {
+      return initialValue;
+    }
+
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.warn(`Error reading localStorage key "${key}":`, error);
+      return initialValue;
+    }
+  });
+
+  // Update localStorage when state changes
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(key, JSON.stringify(storedValue));
+    } catch (error) {
+      console.warn(`Error setting localStorage key "${key}":`, error);
+    }
+  }, [key, storedValue]);
+
+  // Setter that handles both direct values and updater functions
+  const setValue = useCallback((value: T | ((prev: T) => T)) => {
+    setStoredValue((prev) => {
+      const nextValue = value instanceof Function ? value(prev) : value;
+      return nextValue;
+    });
+  }, []);
+
+  // Remove from localStorage
+  const removeValue = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.localStorage.removeItem(key);
+      setStoredValue(initialValue);
+    } catch (error) {
+      console.warn(`Error removing localStorage key "${key}":`, error);
+    }
+  }, [key, initialValue]);
+
+  return [storedValue, setValue, removeValue];
+}
+```
+
+## Usage
+
+### Theme Preference
+
+```tsx
+function ThemeToggle() {
+  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
+
+  return (
+    <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+      Current: {theme}
+    </button>
+  );
+}
+```
+
+### Shopping Cart
+
+```tsx
+interface CartItem {
+  id: string;
+  name: string;
+  quantity: number;
+}
+
+function useCart() {
+  const [cart, setCart, clearCart] = useLocalStorage<CartItem[]>('cart', []);
+
+  const addItem = (item: Omit<CartItem, 'quantity'>) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === item.id);
+      if (existing) {
+        return prev.map((i) =>
+          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+        );
+      }
+      return [...prev, { ...item, quantity: 1 }];
+    });
+  };
+
+  const removeItem = (id: string) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  return { cart, addItem, removeItem, clearCart };
+}
+```
+
+### Form Draft
+
+```tsx
+function ContactForm() {
+  const [draft, setDraft, clearDraft] = useLocalStorage('contact-draft', {
+    name: '',
+    email: '',
+    message: '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitForm(draft);
+    clearDraft();
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        value={draft.name}
+        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        placeholder="Name"
+      />
+      <input
+        value={draft.email}
+        onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+        placeholder="Email"
+      />
+      <textarea
+        value={draft.message}
+        onChange={(e) => setDraft({ ...draft, message: e.target.value })}
+        placeholder="Message"
+      />
+      <button type="submit">Send</button>
+    </form>
+  );
+}
+```
+
+## Cross-Tab Sync
+
+Add storage event listener for cross-tab synchronization:
+
+```typescript
+useEffect(() => {
+  const handleStorageChange = (e: StorageEvent) => {
+    if (e.key === key && e.newValue) {
+      setStoredValue(JSON.parse(e.newValue));
+    }
+  };
+
+  window.addEventListener('storage', handleStorageChange);
+  return () => window.removeEventListener('storage', handleStorageChange);
+}, [key]);
+```

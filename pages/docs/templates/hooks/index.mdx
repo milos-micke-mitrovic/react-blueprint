@@ -1,0 +1,48 @@
+---
+description: Production-ready React hooks for common functionality - debouncing, local storage, click outside detection, and more.
+---
+
+# Hooks
+
+Copy-paste React hooks for common functionality.
+
+import { Cards, Card } from 'nextra/components'
+
+## Available Hooks
+
+<Cards>
+  <Card title="useDebounce" href="/docs/templates/hooks/use-debounce" />
+  <Card title="useLocalStorage" href="/docs/templates/hooks/use-local-storage" />
+  <Card title="useClickOutside" href="/docs/templates/hooks/use-click-outside" />
+  <Card title="useMediaQuery" href="/docs/templates/hooks/use-media-query" />
+  <Card title="useCopyToClipboard" href="/docs/templates/hooks/use-copy-to-clipboard" />
+  <Card title="useToggle" href="/docs/templates/hooks/use-toggle" />
+</Cards>
+
+## Usage
+
+All hooks are designed to be copied directly into your project:
+
+```
+src/
+└── hooks/
+    ├── useDebounce.ts
+    ├── useLocalStorage.ts
+    ├── useClickOutside.ts
+    ├── useMediaQuery.ts
+    ├── useCopyToClipboard.ts
+    ├── useToggle.ts
+    └── index.ts
+```
+
+Export from a barrel file:
+
+```typescript
+// hooks/index.ts
+export { useDebounce } from './useDebounce';
+export { useLocalStorage } from './useLocalStorage';
+export { useClickOutside } from './useClickOutside';
+export { useMediaQuery } from './useMediaQuery';
+export { useCopyToClipboard } from './useCopyToClipboard';
+export { useToggle } from './useToggle';
+```

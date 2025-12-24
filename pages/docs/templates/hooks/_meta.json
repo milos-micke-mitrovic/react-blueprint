@@ -1,0 +1,9 @@
+{
+  "index": "Overview",
+  "use-debounce": "useDebounce",
+  "use-local-storage": "useLocalStorage",
+  "use-click-outside": "useClickOutside",
+  "use-media-query": "useMediaQuery",
+  "use-copy-to-clipboard": "useCopyToClipboard",
+  "use-toggle": "useToggle"
+}
