@@ -1,0 +1,6 @@
+{
+  "patterns": "Auth Patterns",
+  "protected-routes": "Protected Routes",
+  "jwt-sessions": "JWT & Sessions",
+  "oauth": "OAuth & Social Login"
+}

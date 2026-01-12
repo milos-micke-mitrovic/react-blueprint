@@ -1,0 +1,319 @@
+---
+description: Environment variable patterns specific to Next.js applications.
+---
+
+# Next.js Env Variables
+
+Next.js has built-in support for environment variables with special conventions.
+
+## Variable Prefixes
+
+| Prefix | Available In | Use For |
+|--------|--------------|---------|
+| `NEXT_PUBLIC_` | Browser + Server | Public config, API URLs |
+| No prefix | Server only | Secrets, database URLs |
+
+## Build-Time vs Runtime
+
+### Build-Time (Default)
+
+Variables are inlined at build time:
+
+```tsx
+// This gets replaced with actual value during build
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+// After build, the code becomes:
+const apiUrl = "https://api.example.com";
+```
+
+**Pros**: Fast, no runtime lookup
+**Cons**: Need to rebuild to change values
+
+### Runtime Variables
+
+For dynamic values that change without rebuilding:
+
+```tsx
+// next.config.mjs
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Server runtime config (deprecated, use env vars directly)
+  serverRuntimeConfig: {
+    apiSecret: process.env.API_SECRET,
+  },
+
+  // Public runtime config
+  publicRuntimeConfig: {
+    apiUrl: process.env.NEXT_PUBLIC_API_URL,
+  },
+};
+
+export default nextConfig;
+```
+
+```tsx
+// Using runtime config
+import getConfig from 'next/config';
+
+const { publicRuntimeConfig } = getConfig();
+const apiUrl = publicRuntimeConfig.apiUrl;
+```
+
+## App Router Environment Variables
+
+### In Server Components
+
+```tsx
+// app/page.tsx (Server Component)
+async function Page() {
+  // All env vars available
+  const apiKey = process.env.API_KEY;
+
+  const data = await fetch('https://api.example.com', {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+
+  return <div>{/* ... */}</div>;
+}
+```
+
+### In Client Components
+
+```tsx
+// app/components/analytics.tsx
+'use client';
+
+function Analytics() {
+  // Only NEXT_PUBLIC_ vars available
+  const trackingId = process.env.NEXT_PUBLIC_GA_ID;
+
+  return <Script src={`https://www.googletagmanager.com/gtag/js?id=${trackingId}`} />;
+}
+```
+
+### In Route Handlers
+
+```tsx
+// app/api/users/route.ts
+export async function GET() {
+  // All env vars available
+  const dbUrl = process.env.DATABASE_URL;
+
+  const users = await db.query('SELECT * FROM users');
+  return Response.json(users);
+}
+```
+
+### In Middleware
+
+```tsx
+// middleware.ts
+export function middleware(request: NextRequest) {
+  // All env vars available
+  const apiKey = process.env.API_KEY;
+
+  // ...
+}
+```
+
+## Configuration Pattern
+
+```tsx
+// lib/config.ts
+export const config = {
+  app: {
+    name: process.env.NEXT_PUBLIC_APP_NAME || 'MyApp',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    env: process.env.NODE_ENV,
+  },
+  api: {
+    url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+    timeout: 10000,
+  },
+  features: {
+    analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
+    debug: process.env.NODE_ENV === 'development',
+  },
+} as const;
+
+// Usage
+import { config } from '@/lib/config';
+
+console.log(config.app.name);
+console.log(config.features.analytics);
+```
+
+## Server-Only Configuration
+
+```tsx
+// lib/server-config.ts
+import 'server-only'; // Ensures this only runs on server
+
+export const serverConfig = {
+  database: {
+    url: process.env.DATABASE_URL!,
+    poolSize: parseInt(process.env.DB_POOL_SIZE || '10'),
+  },
+  auth: {
+    secret: process.env.NEXTAUTH_SECRET!,
+    jwtSecret: process.env.JWT_SECRET!,
+  },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY!,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+  },
+};
+```
+
+## Dynamic Environment Detection
+
+```tsx
+// lib/env.ts
+export function getBaseUrl() {
+  // Browser
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+
+  // Vercel
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // Other platforms
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+
+  // Localhost
+  return `http://localhost:${process.env.PORT || 3000}`;
+}
+
+// For absolute URLs
+export function getAbsoluteUrl(path: string) {
+  return `${getBaseUrl()}${path}`;
+}
+```
+
+## Environment-Specific Behavior
+
+```tsx
+// lib/env.ts
+export const isDevelopment = process.env.NODE_ENV === 'development';
+export const isProduction = process.env.NODE_ENV === 'production';
+export const isTest = process.env.NODE_ENV === 'test';
+
+// Vercel-specific
+export const isPreview = process.env.VERCEL_ENV === 'preview';
+export const isVercel = !!process.env.VERCEL;
+
+// Usage
+if (isDevelopment) {
+  console.log('Debug info:', data);
+}
+
+if (isPreview) {
+  // Show preview banner
+}
+```
+
+## Vercel Environment Variables
+
+Vercel provides automatic environment variables:
+
+```bash
+# Automatically set by Vercel
+VERCEL=1
+VERCEL_ENV=production|preview|development
+VERCEL_URL=your-site-xxx.vercel.app
+VERCEL_GIT_COMMIT_SHA=abc123
+VERCEL_GIT_COMMIT_MESSAGE=feat: add feature
+VERCEL_GIT_REPO_SLUG=my-repo
+```
+
+```tsx
+// Use for preview deployments
+function PreviewBanner() {
+  if (process.env.VERCEL_ENV !== 'preview') {
+    return null;
+  }
+
+  return (
+    <div className="bg-yellow-500 p-2 text-center">
+      Preview: {process.env.VERCEL_GIT_COMMIT_MESSAGE}
+    </div>
+  );
+}
+```
+
+## Loading External Config
+
+```tsx
+// next.config.mjs
+import { config } from 'dotenv';
+
+// Load from custom file
+config({ path: '.env.custom' });
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  env: {
+    CUSTOM_VAR: process.env.CUSTOM_VAR,
+  },
+};
+
+export default nextConfig;
+```
+
+## Edge Runtime Variables
+
+```tsx
+// app/api/edge/route.ts
+export const runtime = 'edge';
+
+export async function GET() {
+  // Environment variables work in Edge runtime
+  const apiKey = process.env.API_KEY;
+
+  return Response.json({ status: 'ok' });
+}
+```
+
+## Testing with Environment Variables
+
+```tsx
+// jest.setup.js
+process.env.NEXT_PUBLIC_API_URL = 'http://localhost:8000';
+process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+
+// Or use .env.test file
+```
+
+```tsx
+// __tests__/api.test.ts
+describe('API', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  it('uses correct API URL', () => {
+    process.env.NEXT_PUBLIC_API_URL = 'http://test-api.com';
+    // Test...
+  });
+});
+```
+
+## Best Practices
+
+1. **Always use NEXT_PUBLIC_ for client vars** - Security requirement
+2. **Centralize config** - Create a config file, don't scatter process.env calls
+3. **Validate on startup** - Fail fast with clear error messages
+4. **Use TypeScript** - Define types for process.env
+5. **Document variables** - Maintain .env.example with all required vars

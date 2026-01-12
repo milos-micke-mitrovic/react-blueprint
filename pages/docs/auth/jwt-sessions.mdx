@@ -1,0 +1,379 @@
+---
+description: JWT tokens vs session-based authentication in React applications.
+---
+
+# JWT & Sessions
+
+Understanding token-based and session-based authentication.
+
+## JWT vs Sessions
+
+| Feature | JWT | Sessions |
+|---------|-----|----------|
+| Storage | Client (localStorage/cookie) | Server (database/Redis) |
+| Scalability | Stateless, easy to scale | Requires shared session store |
+| Revocation | Hard (need blocklist) | Easy (delete from store) |
+| Size | Larger (contains data) | Small (just session ID) |
+| Security | Risk if stolen | Requires HTTPS + secure cookies |
+
+## JWT Implementation
+
+### Token Structure
+
+```tsx
+// JWT contains three parts: header.payload.signature
+
+// Example payload
+{
+  "sub": "user-123",           // Subject (user ID)
+  "email": "user@example.com",
+  "role": "admin",
+  "iat": 1704067200,           // Issued at
+  "exp": 1704153600            // Expiration
+}
+```
+
+### Storing Tokens
+
+```tsx
+// Option 1: httpOnly cookie (RECOMMENDED)
+// Set by server, inaccessible to JavaScript
+// Automatic on every request
+
+// Option 2: localStorage (less secure)
+localStorage.setItem('token', token);
+
+// Option 3: Memory only (most secure, lost on refresh)
+let token: string | null = null;
+```
+
+### API Client with JWT
+
+```tsx
+// lib/api.ts
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api',
+});
+
+// Add token to requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Handle token expiry
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Try to refresh token
+      try {
+        const newToken = await refreshToken();
+        localStorage.setItem('token', newToken);
+
+        // Retry original request
+        error.config.headers.Authorization = `Bearer ${newToken}`;
+        return api.request(error.config);
+      } catch {
+        // Refresh failed, logout
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export { api };
+```
+
+### Token Refresh
+
+```tsx
+// hooks/use-token-refresh.ts
+import { useEffect, useCallback } from 'react';
+import { jwtDecode } from 'jwt-decode';
+
+interface JWTPayload {
+  exp: number;
+  sub: string;
+}
+
+export function useTokenRefresh() {
+  const refreshToken = useCallback(async () => {
+    const response = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include', // Send cookies
+    });
+
+    if (!response.ok) {
+      throw new Error('Token refresh failed');
+    }
+
+    const { token } = await response.json();
+    localStorage.setItem('token', token);
+    return token;
+  }, []);
+
+  useEffect(() => {
+    const checkAndRefresh = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const decoded = jwtDecode<JWTPayload>(token);
+        const expiresIn = decoded.exp * 1000 - Date.now();
+
+        // Refresh if expires in less than 5 minutes
+        if (expiresIn < 5 * 60 * 1000) {
+          await refreshToken();
+        }
+      } catch {
+        // Invalid token
+        localStorage.removeItem('token');
+      }
+    };
+
+    checkAndRefresh();
+
+    // Check every minute
+    const interval = setInterval(checkAndRefresh, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [refreshToken]);
+
+  return { refreshToken };
+}
+```
+
+### Decode JWT Client-Side
+
+```tsx
+// utils/jwt.ts
+import { jwtDecode } from 'jwt-decode';
+
+interface TokenPayload {
+  sub: string;
+  email: string;
+  role: string;
+  exp: number;
+}
+
+export function getTokenPayload(token: string): TokenPayload | null {
+  try {
+    return jwtDecode<TokenPayload>(token);
+  } catch {
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const payload = getTokenPayload(token);
+  if (!payload) return true;
+  return payload.exp * 1000 < Date.now();
+}
+
+export function getTimeUntilExpiry(token: string): number {
+  const payload = getTokenPayload(token);
+  if (!payload) return 0;
+  return payload.exp * 1000 - Date.now();
+}
+```
+
+## Session-Based Auth
+
+### With httpOnly Cookies
+
+```tsx
+// Server sets cookie on login
+// res.cookie('sessionId', sessionId, {
+//   httpOnly: true,
+//   secure: true,
+//   sameSite: 'strict',
+//   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+// });
+
+// Client-side: credentials: 'include' sends cookies
+async function login(email: string, password: string) {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // Important for cookies
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Login failed');
+  }
+
+  return response.json();
+}
+
+async function fetchProtectedData() {
+  const response = await fetch('/api/protected', {
+    credentials: 'include', // Send session cookie
+  });
+
+  return response.json();
+}
+```
+
+### Session with Axios
+
+```tsx
+// lib/api.ts
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api',
+  withCredentials: true, // Send cookies with every request
+});
+
+export { api };
+```
+
+## Secure Token Storage
+
+### Using httpOnly Cookies (Recommended)
+
+```tsx
+// Next.js API route example
+// pages/api/auth/login.ts
+import { NextApiRequest, NextApiResponse } from 'next';
+import { serialize } from 'cookie';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Validate credentials...
+  const { accessToken, refreshToken } = await authenticateUser(req.body);
+
+  // Set tokens in httpOnly cookies
+  res.setHeader('Set-Cookie', [
+    serialize('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60, // 15 minutes
+      path: '/',
+    }),
+    serialize('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/api/auth/refresh', // Only sent to refresh endpoint
+    }),
+  ]);
+
+  res.json({ user: { email: 'user@example.com' } });
+}
+```
+
+### Memory + Refresh Token Pattern
+
+```tsx
+// Most secure for SPAs - token never in localStorage
+// stores/auth-store.ts
+import { create } from 'zustand';
+
+interface AuthState {
+  accessToken: string | null;
+  setAccessToken: (token: string | null) => void;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  accessToken: null,
+  setAccessToken: (token) => set({ accessToken: token }),
+}));
+
+// On app load, try to get token from refresh
+async function initializeAuth() {
+  try {
+    const response = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include', // Send refresh token cookie
+    });
+
+    if (response.ok) {
+      const { accessToken } = await response.json();
+      useAuthStore.getState().setAccessToken(accessToken);
+    }
+  } catch {
+    // Not authenticated
+  }
+}
+```
+
+## CSRF Protection
+
+```tsx
+// For session-based auth with cookies, add CSRF token
+// Server sends CSRF token in response header or body
+// Client includes it in subsequent requests
+
+// Get CSRF token on app load
+let csrfToken: string | null = null;
+
+async function getCsrfToken() {
+  const response = await fetch('/api/auth/csrf');
+  const { token } = await response.json();
+  csrfToken = token;
+}
+
+// Include in requests
+async function updateProfile(data: ProfileData) {
+  const response = await fetch('/api/profile', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken!,
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+
+  return response.json();
+}
+```
+
+## Token Refresh Strategies
+
+### Silent Refresh
+
+```tsx
+// Refresh token before it expires
+function scheduleTokenRefresh(token: string) {
+  const payload = jwtDecode<{ exp: number }>(token);
+  const expiresIn = payload.exp * 1000 - Date.now();
+
+  // Refresh 1 minute before expiry
+  const refreshIn = expiresIn - 60 * 1000;
+
+  if (refreshIn > 0) {
+    setTimeout(async () => {
+      const newToken = await refreshAccessToken();
+      scheduleTokenRefresh(newToken);
+    }, refreshIn);
+  }
+}
+```
+
+### Refresh on 401
+
+```tsx
+// Axios interceptor approach shown above
+// Retry failed request after refreshing token
+```
+
+## Best Practices
+
+1. **Use httpOnly cookies** - Prevents XSS from stealing tokens
+2. **Short access token expiry** - 15 minutes is common
+3. **Long refresh token expiry** - 7-30 days, stored securely
+4. **Rotate refresh tokens** - Issue new one on each refresh
+5. **HTTPS only** - Never send tokens over HTTP
+6. **Validate on server** - Never trust client-side token validation alone
+7. **Handle expiry gracefully** - Refresh before expiry, not after

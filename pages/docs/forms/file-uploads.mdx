@@ -1,0 +1,424 @@
+---
+description: Handle file uploads in React forms with validation and progress tracking.
+---
+
+# File Uploads
+
+Patterns for handling file uploads in React applications.
+
+## Basic File Input
+
+```tsx
+import { useForm } from 'react-hook-form';
+
+interface FormData {
+  avatar: FileList;
+}
+
+function AvatarUpload() {
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
+
+  const onSubmit = async (data: FormData) => {
+    const file = data.avatar[0];
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input
+        type="file"
+        accept="image/*"
+        {...register('avatar', { required: 'Please select a file' })}
+      />
+      {errors.avatar && <span>{errors.avatar.message}</span>}
+      <button type="submit">Upload</button>
+    </form>
+  );
+}
+```
+
+## File Validation with Zod
+
+```tsx
+import { z } from 'zod';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+const uploadSchema = z.object({
+  avatar: z
+    .custom<FileList>()
+    .refine((files) => files?.length === 1, 'Please select a file')
+    .refine(
+      (files) => files?.[0]?.size <= MAX_FILE_SIZE,
+      'File size must be less than 5MB'
+    )
+    .refine(
+      (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
+      'Only .jpg, .png, and .webp formats are supported'
+    ),
+});
+
+// For multiple files
+const multiUploadSchema = z.object({
+  documents: z
+    .custom<FileList>()
+    .refine((files) => files?.length >= 1, 'Select at least one file')
+    .refine((files) => files?.length <= 5, 'Maximum 5 files allowed')
+    .refine(
+      (files) => Array.from(files || []).every((f) => f.size <= MAX_FILE_SIZE),
+      'Each file must be less than 5MB'
+    ),
+});
+```
+
+## Drag and Drop Upload
+
+```tsx
+import { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+
+interface FileWithPreview extends File {
+  preview: string;
+}
+
+function DragDropUpload() {
+  const [files, setFiles] = useState<FileWithPreview[]>([]);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setFiles(
+      acceptedFiles.map((file) =>
+        Object.assign(file, {
+          preview: URL.createObjectURL(file),
+        })
+      )
+    );
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp'],
+    },
+    maxSize: 5 * 1024 * 1024,
+    maxFiles: 5,
+  });
+
+  // Cleanup previews on unmount
+  useEffect(() => {
+    return () => files.forEach((file) => URL.revokeObjectURL(file.preview));
+  }, [files]);
+
+  return (
+    <div>
+      <div
+        {...getRootProps()}
+        className={`
+          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
+        `}
+      >
+        <input {...getInputProps()} />
+        {isDragActive ? (
+          <p>Drop the files here...</p>
+        ) : (
+          <p>Drag & drop files here, or click to select</p>
+        )}
+      </div>
+
+      {/* Preview */}
+      <div className="grid grid-cols-3 gap-4 mt-4">
+        {files.map((file) => (
+          <div key={file.name} className="relative">
+            <img
+              src={file.preview}
+              alt={file.name}
+              className="w-full h-32 object-cover rounded"
+            />
+            <button
+              onClick={() => setFiles(files.filter((f) => f !== file))}
+              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Upload with Progress
+
+```tsx
+import { useState } from 'react';
+import axios from 'axios';
+
+function UploadWithProgress() {
+  const [progress, setProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setUploading(true);
+    setProgress(0);
+
+    try {
+      await axios.post('/api/upload', formData, {
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total || 1)
+          );
+          setProgress(percent);
+        },
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+        disabled={uploading}
+      />
+
+      {uploading && (
+        <div className="mt-4">
+          <div className="bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-sm mt-1">{progress}% uploaded</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Image Preview Before Upload
+
+```tsx
+import { useState } from 'react';
+
+function ImagePreviewUpload() {
+  const [preview, setPreview] = useState<string | null>(null);
+  const { register, handleSubmit } = useForm<FormData>();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="flex items-center gap-4">
+        {preview ? (
+          <img
+            src={preview}
+            alt="Preview"
+            className="w-24 h-24 rounded-full object-cover"
+          />
+        ) : (
+          <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
+            <span className="text-gray-500">No image</span>
+          </div>
+        )}
+
+        <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded">
+          Choose Image
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            {...register('avatar')}
+            onChange={(e) => {
+              register('avatar').onChange(e);
+              handleFileChange(e);
+            }}
+          />
+        </label>
+      </div>
+
+      <button type="submit">Save</button>
+    </form>
+  );
+}
+```
+
+## Multiple File Upload
+
+```tsx
+function MultipleFileUpload() {
+  const [files, setFiles] = useState<File[]>([]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files));
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(files.filter((_, i) => i !== index));
+  };
+
+  const uploadAll = async () => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    await fetch('/api/upload-multiple', {
+      method: 'POST',
+      body: formData,
+    });
+  };
+
+  return (
+    <div>
+      <input
+        type="file"
+        multiple
+        onChange={handleFileChange}
+        accept=".pdf,.doc,.docx"
+      />
+
+      {files.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {files.map((file, index) => (
+            <li key={index} className="flex items-center justify-between">
+              <span>{file.name}</span>
+              <span className="text-gray-500 text-sm">
+                {(file.size / 1024).toFixed(1)} KB
+              </span>
+              <button onClick={() => removeFile(index)}>Remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <button onClick={uploadAll} disabled={files.length === 0}>
+        Upload {files.length} files
+      </button>
+    </div>
+  );
+}
+```
+
+## Presigned URL Upload (S3/Cloud Storage)
+
+```tsx
+async function uploadToS3(file: File) {
+  // 1. Get presigned URL from your backend
+  const { uploadUrl, fileUrl } = await fetch('/api/get-upload-url', {
+    method: 'POST',
+    body: JSON.stringify({
+      fileName: file.name,
+      fileType: file.type,
+    }),
+  }).then((r) => r.json());
+
+  // 2. Upload directly to S3
+  await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: {
+      'Content-Type': file.type,
+    },
+  });
+
+  // 3. Return the public URL
+  return fileUrl;
+}
+
+function S3Upload() {
+  const [uploading, setUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const url = await uploadToS3(file);
+      setImageUrl(url);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <input type="file" onChange={handleUpload} disabled={uploading} />
+      {uploading && <p>Uploading...</p>}
+      {imageUrl && <img src={imageUrl} alt="Uploaded" />}
+    </div>
+  );
+}
+```
+
+## Custom File Input Styling
+
+```tsx
+function StyledFileInput() {
+  const [fileName, setFileName] = useState<string>('');
+
+  return (
+    <div>
+      <label
+        htmlFor="file-upload"
+        className="
+          inline-flex items-center gap-2 px-4 py-2
+          bg-white border border-gray-300 rounded-md
+          cursor-pointer hover:bg-gray-50
+          focus-within:ring-2 focus-within:ring-blue-500
+        "
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        <span>{fileName || 'Choose file'}</span>
+        <input
+          id="file-upload"
+          type="file"
+          className="sr-only"
+          onChange={(e) => setFileName(e.target.files?.[0]?.name || '')}
+        />
+      </label>
+    </div>
+  );
+}
+```
+
+## Best Practices
+
+1. **Validate on client and server** - Never trust client-side validation alone
+2. **Limit file size** - Prevent large uploads that could crash the server
+3. **Check file types** - Validate MIME types, not just extensions
+4. **Show progress** - Users need feedback for large uploads
+5. **Handle errors gracefully** - Network issues, file too large, wrong type
+6. **Clean up previews** - Revoke object URLs to prevent memory leaks
+7. **Use presigned URLs** - Upload directly to cloud storage for large files

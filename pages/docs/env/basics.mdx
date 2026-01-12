@@ -1,0 +1,237 @@
+---
+description: Managing environment variables in React applications for different environments.
+---
+
+# Environment Basics
+
+Environment variables configure your app for different environments (development, staging, production).
+
+## Why Environment Variables?
+
+- **Security** - Keep secrets out of code
+- **Flexibility** - Different configs for different environments
+- **Portability** - Same code, different deployments
+
+## Common Environment Variables
+
+```bash
+# .env.example (commit this file)
+
+# App
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_NAME=MyApp
+
+# API
+API_URL=http://localhost:8000
+API_KEY=your-api-key
+
+# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+
+# Auth
+NEXTAUTH_SECRET=random-secret-here
+NEXTAUTH_URL=http://localhost:3000
+
+# Third-party services
+STRIPE_SECRET_KEY=sk_test_xxx
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+
+# Feature flags
+NEXT_PUBLIC_ENABLE_ANALYTICS=false
+```
+
+## File Structure
+
+```
+project/
+├── .env                  # Default (loaded in all environments)
+├── .env.local            # Local overrides (git ignored)
+├── .env.development      # Development defaults
+├── .env.development.local # Local dev overrides (git ignored)
+├── .env.production       # Production defaults
+├── .env.production.local # Local prod overrides (git ignored)
+├── .env.test             # Test environment
+└── .env.example          # Template (commit this)
+```
+
+## Loading Priority
+
+Variables are loaded in this order (later overrides earlier):
+
+1. `.env` (default)
+2. `.env.local` (always loaded, git ignored)
+3. `.env.[environment]` (development/production/test)
+4. `.env.[environment].local` (git ignored)
+
+## Public vs Private Variables
+
+### Client-Side (Public)
+
+```bash
+# Prefix with NEXT_PUBLIC_ (Next.js) or REACT_APP_ (CRA)
+NEXT_PUBLIC_API_URL=https://api.example.com
+REACT_APP_API_URL=https://api.example.com
+```
+
+```tsx
+// Accessible in browser
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+```
+
+### Server-Side Only (Private)
+
+```bash
+# No prefix - only available on server
+DATABASE_URL=postgresql://...
+API_SECRET_KEY=xxx
+```
+
+```tsx
+// Only works in server code (API routes, getServerSideProps)
+const dbUrl = process.env.DATABASE_URL;
+
+// This will be undefined in browser!
+```
+
+## .gitignore Setup
+
+```gitignore
+# Environment files with secrets
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+# Never commit these
+.env*.local
+```
+
+## Type Safety
+
+```tsx
+// env.d.ts
+declare namespace NodeJS {
+  interface ProcessEnv {
+    NODE_ENV: 'development' | 'production' | 'test';
+    NEXT_PUBLIC_APP_URL: string;
+    NEXT_PUBLIC_API_URL: string;
+    DATABASE_URL: string;
+    API_SECRET_KEY: string;
+  }
+}
+```
+
+## Accessing Variables
+
+### In React Components
+
+```tsx
+function ApiStatus() {
+  // Only NEXT_PUBLIC_ or REACT_APP_ prefixed vars
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  return <div>API: {apiUrl}</div>;
+}
+```
+
+### In Next.js API Routes
+
+```tsx
+// pages/api/users.ts
+export default function handler(req, res) {
+  // All env vars available
+  const dbUrl = process.env.DATABASE_URL;
+  const apiKey = process.env.API_SECRET_KEY;
+
+  // ...
+}
+```
+
+### In getServerSideProps
+
+```tsx
+export const getServerSideProps = async () => {
+  // All env vars available
+  const data = await fetch(process.env.API_URL, {
+    headers: {
+      Authorization: `Bearer ${process.env.API_SECRET_KEY}`,
+    },
+  });
+
+  return { props: { data } };
+};
+```
+
+## Different Environments
+
+### Development
+
+```bash
+# .env.development
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_ENABLE_DEBUG=true
+```
+
+### Production
+
+```bash
+# .env.production
+NEXT_PUBLIC_API_URL=https://api.myapp.com
+NEXT_PUBLIC_ENABLE_DEBUG=false
+```
+
+### Test
+
+```bash
+# .env.test
+NEXT_PUBLIC_API_URL=http://localhost:8000
+DATABASE_URL=postgresql://localhost:5432/myapp_test
+```
+
+## Platform-Specific Setup
+
+### Vercel
+
+```bash
+# Set in Vercel dashboard or CLI
+vercel env add DATABASE_URL production
+vercel env add DATABASE_URL preview
+vercel env add DATABASE_URL development
+```
+
+### Netlify
+
+```bash
+# Set in Netlify dashboard under Site settings > Build & deploy > Environment
+```
+
+### Docker
+
+```dockerfile
+# Dockerfile
+ENV NODE_ENV=production
+
+# docker-compose.yml
+services:
+  app:
+    environment:
+      - DATABASE_URL=postgresql://db:5432/myapp
+      - API_KEY=${API_KEY}  # From host .env
+```
+
+## Security Best Practices
+
+1. **Never commit secrets** - Use `.env.local` for sensitive values
+2. **Use .env.example** - Document required variables
+3. **Validate at startup** - Fail fast if vars are missing
+4. **Rotate secrets regularly** - Especially after incidents
+5. **Use secret managers** - AWS Secrets Manager, HashiCorp Vault
+6. **Audit access** - Know who can see production secrets
+
+## Common Mistakes
+
+1. **Committing .env.local** - Add to .gitignore
+2. **Using secrets client-side** - Never prefix secrets with NEXT_PUBLIC_
+3. **Hardcoding values** - Use env vars for anything that varies
+4. **Missing in production** - Always set vars before deploying
+5. **Wrong prefix** - NEXT_PUBLIC_ for client, none for server

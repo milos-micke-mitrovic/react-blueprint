@@ -1,0 +1,367 @@
+---
+description: Best practices for managing and organizing translation files.
+---
+
+# Managing Translations
+
+Organize and maintain translations effectively as your app grows.
+
+## File Organization
+
+### By Language (Recommended)
+
+```
+messages/
+├── en.json          # All English translations
+├── es.json          # All Spanish translations
+└── fr.json          # All French translations
+```
+
+### By Namespace
+
+```
+messages/
+├── en/
+│   ├── common.json
+│   ├── home.json
+│   ├── auth.json
+│   └── dashboard.json
+├── es/
+│   ├── common.json
+│   ├── home.json
+│   ├── auth.json
+│   └── dashboard.json
+```
+
+Loading namespaced translations:
+
+```tsx
+// i18n/request.ts
+export default getRequestConfig(async ({ locale }) => {
+  const common = (await import(`../messages/${locale}/common.json`)).default;
+  const home = (await import(`../messages/${locale}/home.json`)).default;
+  const auth = (await import(`../messages/${locale}/auth.json`)).default;
+
+  return {
+    locale,
+    messages: {
+      common,
+      home,
+      auth,
+    },
+  };
+});
+```
+
+## Translation Structure
+
+### Flat Structure
+
+```json
+{
+  "home.title": "Welcome",
+  "home.description": "Build amazing apps",
+  "nav.home": "Home",
+  "nav.about": "About"
+}
+```
+
+### Nested Structure (Recommended)
+
+```json
+{
+  "home": {
+    "title": "Welcome",
+    "description": "Build amazing apps",
+    "hero": {
+      "heading": "Start Building Today",
+      "subheading": "The best way to create React apps"
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "contact": "Contact"
+  }
+}
+```
+
+## Dynamic Values
+
+### Variables
+
+```json
+{
+  "greeting": "Hello, {name}!",
+  "items": "You have {count} items",
+  "price": "Total: {amount, number, currency}"
+}
+```
+
+```tsx
+const t = useTranslations();
+
+t('greeting', { name: 'John' });        // "Hello, John!"
+t('items', { count: 5 });                // "You have 5 items"
+t('price', { amount: 99.99 });           // "Total: $99.99"
+```
+
+### Pluralization
+
+```json
+{
+  "items": {
+    "zero": "No items",
+    "one": "One item",
+    "other": "{count} items"
+  }
+}
+```
+
+```tsx
+t('items', { count: 0 });  // "No items"
+t('items', { count: 1 });  // "One item"
+t('items', { count: 5 });  // "5 items"
+```
+
+### Rich Text / HTML
+
+```json
+{
+  "terms": "By signing up, you agree to our <link>Terms of Service</link>",
+  "highlight": "This is <bold>important</bold> information"
+}
+```
+
+```tsx
+// next-intl
+t.rich('terms', {
+  link: (chunks) => <a href="/terms">{chunks}</a>,
+});
+
+t.rich('highlight', {
+  bold: (chunks) => <strong>{chunks}</strong>,
+});
+```
+
+## Date and Number Formatting
+
+### Dates
+
+```tsx
+import { useFormatter } from 'next-intl';
+
+function DateDisplay({ date }: { date: Date }) {
+  const format = useFormatter();
+
+  return (
+    <div>
+      {/* "January 15, 2024" or "15 de enero de 2024" */}
+      <p>{format.dateTime(date, { dateStyle: 'long' })}</p>
+
+      {/* "Jan 15, 2024, 3:30 PM" */}
+      <p>{format.dateTime(date, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+      })}</p>
+
+      {/* Relative time: "2 days ago" */}
+      <p>{format.relativeTime(date)}</p>
+    </div>
+  );
+}
+```
+
+### Numbers and Currency
+
+```tsx
+import { useFormatter } from 'next-intl';
+
+function PriceDisplay({ amount }: { amount: number }) {
+  const format = useFormatter();
+
+  return (
+    <div>
+      {/* "$1,234.56" or "1.234,56 €" */}
+      <p>{format.number(amount, { style: 'currency', currency: 'USD' })}</p>
+
+      {/* "1,234.56" or "1.234,56" */}
+      <p>{format.number(amount)}</p>
+
+      {/* "85%" */}
+      <p>{format.number(0.85, { style: 'percent' })}</p>
+    </div>
+  );
+}
+```
+
+## Translation Keys Convention
+
+### Naming Patterns
+
+```json
+{
+  "page.home.title": "Home Page",
+  "page.home.meta.description": "Welcome to our site",
+
+  "component.button.submit": "Submit",
+  "component.button.cancel": "Cancel",
+
+  "form.email.label": "Email Address",
+  "form.email.placeholder": "Enter your email",
+  "form.email.error.required": "Email is required",
+  "form.email.error.invalid": "Invalid email format",
+
+  "action.save.success": "Saved successfully",
+  "action.save.error": "Failed to save",
+  "action.delete.confirm": "Are you sure you want to delete?"
+}
+```
+
+### Feature-Based Keys
+
+```json
+{
+  "auth": {
+    "login": {
+      "title": "Sign In",
+      "submit": "Log In",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "Don't have an account?"
+    },
+    "register": {
+      "title": "Create Account",
+      "submit": "Sign Up",
+      "hasAccount": "Already have an account?"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "users": "Total Users",
+      "revenue": "Revenue",
+      "orders": "Orders"
+    }
+  }
+}
+```
+
+## Extraction Tools
+
+### i18next-parser
+
+```bash
+npm install -D i18next-parser
+```
+
+```js
+// i18next-parser.config.js
+module.exports = {
+  locales: ['en', 'es', 'fr'],
+  output: 'messages/$LOCALE.json',
+  input: ['src/**/*.{ts,tsx}'],
+  keySeparator: '.',
+  namespaceSeparator: ':',
+  defaultValue: '__MISSING__',
+};
+```
+
+```bash
+npx i18next-parser
+```
+
+## Translation Management Platforms
+
+| Platform | Features |
+|----------|----------|
+| Crowdin | CI integration, in-context editing |
+| Lokalise | AI translations, screenshots |
+| Phrase | Git sync, translation memory |
+| POEditor | Simple, affordable |
+
+### Crowdin Integration
+
+```yaml
+# crowdin.yml
+project_id: '123456'
+api_token_env: CROWDIN_TOKEN
+preserve_hierarchy: true
+
+files:
+  - source: /messages/en.json
+    translation: /messages/%locale%.json
+```
+
+```bash
+# Upload sources
+crowdin upload sources
+
+# Download translations
+crowdin download
+```
+
+## Missing Translation Handling
+
+```tsx
+// Show key in development
+const t = useTranslations('home');
+t('nonexistent'); // Development: "[home.nonexistent]"
+
+// Custom fallback
+function SafeTranslation({ id, fallback }: { id: string; fallback: string }) {
+  const t = useTranslations();
+
+  try {
+    return <>{t(id)}</>;
+  } catch {
+    return <>{fallback}</>;
+  }
+}
+```
+
+## Validation Script
+
+```tsx
+// scripts/validate-translations.ts
+import en from '../messages/en.json';
+import es from '../messages/es.json';
+import fr from '../messages/fr.json';
+
+function getKeys(obj: object, prefix = ''): string[] {
+  return Object.entries(obj).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === 'object' && value !== null) {
+      return getKeys(value, path);
+    }
+    return [path];
+  });
+}
+
+const enKeys = new Set(getKeys(en));
+const esKeys = new Set(getKeys(es));
+const frKeys = new Set(getKeys(fr));
+
+// Find missing keys
+const missingInEs = [...enKeys].filter((k) => !esKeys.has(k));
+const missingInFr = [...enKeys].filter((k) => !frKeys.has(k));
+
+if (missingInEs.length > 0) {
+  console.error('Missing in Spanish:', missingInEs);
+}
+
+if (missingInFr.length > 0) {
+  console.error('Missing in French:', missingInFr);
+}
+```
+
+## Best Practices
+
+1. **Use semantic keys** - `auth.login.submit` not `button1`
+2. **Keep translations flat** - Avoid deep nesting (max 2-3 levels)
+3. **Include context** - Help translators with comments
+4. **Test all languages** - Don't just test the default
+5. **Handle text expansion** - German is ~30% longer than English
+6. **Avoid concatenation** - Use variables, not string concatenation

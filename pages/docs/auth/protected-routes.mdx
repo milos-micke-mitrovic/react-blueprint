@@ -1,0 +1,389 @@
+---
+description: Protect routes and redirect unauthenticated users in React applications.
+---
+
+# Protected Routes
+
+Prevent unauthorized access to pages and components.
+
+## React Router Protection
+
+```tsx
+// components/auth/protected-route.tsx
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth-context';
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredRole?: string;
+}
+
+export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    // Redirect to login with return URL
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Usage in routes
+import { Routes, Route } from 'react-router-dom';
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      {/* Protected routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admin only */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requiredRole="admin">
+            <AdminPage />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
+```
+
+## Layout-Based Protection
+
+```tsx
+// layouts/protected-layout.tsx
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth-context';
+
+export function ProtectedLayout() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return (
+    <div className="protected-layout">
+      <Sidebar />
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+// Routes with layout
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* All protected routes use ProtectedLayout */}
+      <Route element={<ProtectedLayout />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+    </Routes>
+  );
+}
+```
+
+## Next.js Middleware Protection
+
+```tsx
+// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+const protectedPaths = ['/dashboard', '/profile', '/settings'];
+const authPaths = ['/login', '/register'];
+
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth-token')?.value;
+  const { pathname } = request.nextUrl;
+
+  // Redirect logged-in users away from auth pages
+  if (authPaths.some((path) => pathname.startsWith(path))) {
+    if (token) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Protect routes
+  if (protectedPaths.some((path) => pathname.startsWith(path))) {
+    if (!token) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('returnUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/profile/:path*', '/settings/:path*', '/login', '/register'],
+};
+```
+
+## Next.js Page-Level Protection
+
+```tsx
+// pages/dashboard.tsx
+import { GetServerSideProps } from 'next';
+import { getSession } from '@/lib/auth';
+
+export default function DashboardPage({ user }) {
+  return <Dashboard user={user} />;
+}
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await getSession(context.req);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: `/login?returnUrl=${context.resolvedUrl}`,
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      user: session.user,
+    },
+  };
+};
+```
+
+## Next.js App Router Protection
+
+```tsx
+// app/dashboard/layout.tsx
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/auth';
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getSession();
+
+  if (!session) {
+    redirect('/login');
+  }
+
+  return (
+    <div className="dashboard-layout">
+      <Sidebar user={session.user} />
+      <main>{children}</main>
+    </div>
+  );
+}
+```
+
+## HOC Pattern (Higher-Order Component)
+
+```tsx
+// hoc/with-auth.tsx
+import { useRouter } from 'next/router';
+import { useAuth } from '@/contexts/auth-context';
+import { ComponentType, useEffect } from 'react';
+
+interface WithAuthOptions {
+  requiredRole?: string;
+  redirectTo?: string;
+}
+
+export function withAuth<P extends object>(
+  WrappedComponent: ComponentType<P>,
+  options: WithAuthOptions = {}
+) {
+  const { requiredRole, redirectTo = '/login' } = options;
+
+  return function WithAuthComponent(props: P) {
+    const { isAuthenticated, isLoading, user } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+      if (!isLoading && !isAuthenticated) {
+        router.push(`${redirectTo}?returnUrl=${router.asPath}`);
+      }
+
+      if (!isLoading && requiredRole && user?.role !== requiredRole) {
+        router.push('/unauthorized');
+      }
+    }, [isLoading, isAuthenticated, user, router]);
+
+    if (isLoading) {
+      return <LoadingSpinner />;
+    }
+
+    if (!isAuthenticated) {
+      return null;
+    }
+
+    if (requiredRole && user?.role !== requiredRole) {
+      return null;
+    }
+
+    return <WrappedComponent {...props} />;
+  };
+}
+
+// Usage
+const ProtectedDashboard = withAuth(DashboardPage);
+const AdminPanel = withAuth(AdminPage, { requiredRole: 'admin' });
+```
+
+## Client-Side Route Guard Hook
+
+```tsx
+// hooks/use-require-auth.ts
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useAuth } from '@/contexts/auth-context';
+
+interface UseRequireAuthOptions {
+  redirectTo?: string;
+  requiredRole?: string;
+}
+
+export function useRequireAuth(options: UseRequireAuthOptions = {}) {
+  const { redirectTo = '/login', requiredRole } = options;
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      router.push(`${redirectTo}?returnUrl=${router.asPath}`);
+      return;
+    }
+
+    if (requiredRole && user?.role !== requiredRole) {
+      router.push('/unauthorized');
+    }
+  }, [isLoading, isAuthenticated, user, router, redirectTo, requiredRole]);
+
+  return {
+    isLoading,
+    isAuthenticated,
+    user,
+  };
+}
+
+// Usage
+function DashboardPage() {
+  const { isLoading, user } = useRequireAuth();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  return <Dashboard user={user} />;
+}
+```
+
+## Redirect After Login
+
+```tsx
+// pages/login.tsx
+import { useRouter } from 'next/router';
+import { useAuth } from '@/contexts/auth-context';
+
+function LoginPage() {
+  const router = useRouter();
+  const { login } = useAuth();
+
+  // Get return URL from query params
+  const returnUrl = (router.query.returnUrl as string) || '/dashboard';
+
+  const handleSubmit = async (data: LoginForm) => {
+    await login(data.email, data.password);
+    router.push(returnUrl);
+  };
+
+  return <LoginForm onSubmit={handleSubmit} />;
+}
+```
+
+## Guest-Only Routes
+
+```tsx
+// components/auth/guest-route.tsx
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth-context';
+
+interface GuestRouteProps {
+  children: React.ReactNode;
+  redirectTo?: string;
+}
+
+export function GuestRoute({ children, redirectTo = '/dashboard' }: GuestRouteProps) {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Usage - redirect logged-in users away from login page
+<Route
+  path="/login"
+  element={
+    <GuestRoute>
+      <LoginPage />
+    </GuestRoute>
+  }
+/>
+```
+
+## Best Practices
+
+1. **Server-side first** - Always validate auth on the server
+2. **Handle loading states** - Show spinners during auth checks
+3. **Preserve return URL** - Redirect back after login
+4. **Use middleware** - Protect routes at the edge when possible
+5. **Role-based access** - Check permissions, not just authentication
+6. **Graceful degradation** - Show appropriate UI for unauthorized users

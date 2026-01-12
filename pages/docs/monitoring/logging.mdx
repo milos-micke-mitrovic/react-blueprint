@@ -1,0 +1,397 @@
+---
+description: Implement structured logging for debugging and monitoring.
+---
+
+# Logging
+
+Structured logging for debugging and monitoring your application.
+
+## Why Structured Logging?
+
+- **Searchable** - Query logs by any field
+- **Context** - Include metadata with every log
+- **Levels** - Filter by severity
+- **Aggregation** - Group related logs
+
+## Console Logging (Development)
+
+```tsx
+// lib/logger.ts
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+interface LogContext {
+  [key: string]: unknown;
+}
+
+const LOG_LEVELS: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+};
+
+const currentLevel = process.env.NODE_ENV === 'production' ? 'info' : 'debug';
+
+function shouldLog(level: LogLevel): boolean {
+  return LOG_LEVELS[level] >= LOG_LEVELS[currentLevel];
+}
+
+export const logger = {
+  debug: (message: string, context?: LogContext) => {
+    if (shouldLog('debug')) {
+      console.debug(`[DEBUG] ${message}`, context || '');
+    }
+  },
+
+  info: (message: string, context?: LogContext) => {
+    if (shouldLog('info')) {
+      console.info(`[INFO] ${message}`, context || '');
+    }
+  },
+
+  warn: (message: string, context?: LogContext) => {
+    if (shouldLog('warn')) {
+      console.warn(`[WARN] ${message}`, context || '');
+    }
+  },
+
+  error: (message: string, error?: Error, context?: LogContext) => {
+    if (shouldLog('error')) {
+      console.error(`[ERROR] ${message}`, { error, ...context });
+    }
+  },
+};
+```
+
+## Pino (Production-Ready)
+
+```bash
+npm install pino pino-pretty
+```
+
+```tsx
+// lib/logger.ts
+import pino from 'pino';
+
+export const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport:
+    process.env.NODE_ENV === 'development'
+      ? {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+          },
+        }
+      : undefined,
+  base: {
+    env: process.env.NODE_ENV,
+    revision: process.env.VERCEL_GIT_COMMIT_SHA,
+  },
+});
+
+// Child logger with context
+export function createLogger(context: { module: string }) {
+  return logger.child(context);
+}
+```
+
+### Usage
+
+```tsx
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ module: 'auth' });
+
+// Simple logging
+log.info('User logged in');
+
+// With context
+log.info({ userId: user.id, method: 'oauth' }, 'User logged in');
+
+// Error logging
+log.error({ err: error, userId: user.id }, 'Login failed');
+```
+
+## API Request Logging
+
+```tsx
+// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { logger } from '@/lib/logger';
+
+export function middleware(request: NextRequest) {
+  const start = Date.now();
+
+  const response = NextResponse.next();
+
+  // Log after response
+  const duration = Date.now() - start;
+
+  logger.info({
+    method: request.method,
+    url: request.url,
+    status: response.status,
+    duration,
+    userAgent: request.headers.get('user-agent'),
+  }, 'HTTP Request');
+
+  return response;
+}
+```
+
+## API Route Logging
+
+```tsx
+// lib/api-logger.ts
+import { logger } from '@/lib/logger';
+import { NextRequest } from 'next/server';
+
+export function withLogging(
+  handler: (req: NextRequest) => Promise<Response>
+) {
+  return async (req: NextRequest) => {
+    const start = Date.now();
+    const requestId = crypto.randomUUID();
+
+    logger.info({
+      requestId,
+      method: req.method,
+      url: req.url,
+    }, 'Request started');
+
+    try {
+      const response = await handler(req);
+
+      logger.info({
+        requestId,
+        duration: Date.now() - start,
+        status: response.status,
+      }, 'Request completed');
+
+      return response;
+    } catch (error) {
+      logger.error({
+        requestId,
+        duration: Date.now() - start,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }, 'Request failed');
+
+      throw error;
+    }
+  };
+}
+
+// Usage
+// app/api/users/route.ts
+import { withLogging } from '@/lib/api-logger';
+
+export const GET = withLogging(async (req) => {
+  const users = await db.users.findMany();
+  return Response.json(users);
+});
+```
+
+## Client-Side Logging
+
+```tsx
+// lib/client-logger.ts
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+interface LogEntry {
+  level: LogLevel;
+  message: string;
+  timestamp: string;
+  context?: object;
+}
+
+class ClientLogger {
+  private queue: LogEntry[] = [];
+  private flushInterval = 5000; // 5 seconds
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      setInterval(() => this.flush(), this.flushInterval);
+      window.addEventListener('beforeunload', () => this.flush());
+    }
+  }
+
+  private log(level: LogLevel, message: string, context?: object) {
+    const entry: LogEntry = {
+      level,
+      message,
+      timestamp: new Date().toISOString(),
+      context,
+    };
+
+    // Console in development
+    if (process.env.NODE_ENV === 'development') {
+      console[level](message, context);
+    }
+
+    // Queue for sending to server
+    this.queue.push(entry);
+
+    // Flush immediately for errors
+    if (level === 'error') {
+      this.flush();
+    }
+  }
+
+  private async flush() {
+    if (this.queue.length === 0) return;
+
+    const logs = [...this.queue];
+    this.queue = [];
+
+    try {
+      await fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logs }),
+      });
+    } catch {
+      // Re-queue on failure
+      this.queue = [...logs, ...this.queue];
+    }
+  }
+
+  debug = (message: string, context?: object) => this.log('debug', message, context);
+  info = (message: string, context?: object) => this.log('info', message, context);
+  warn = (message: string, context?: object) => this.log('warn', message, context);
+  error = (message: string, context?: object) => this.log('error', message, context);
+}
+
+export const clientLogger = new ClientLogger();
+```
+
+## Log Aggregation Services
+
+### Axiom
+
+```bash
+npm install @axiomhq/js
+```
+
+```tsx
+// lib/axiom.ts
+import { Axiom } from '@axiomhq/js';
+
+const axiom = new Axiom({
+  token: process.env.AXIOM_TOKEN!,
+});
+
+export async function logToAxiom(event: object) {
+  await axiom.ingest('my-dataset', [event]);
+}
+```
+
+### Logtail
+
+```bash
+npm install @logtail/pino
+```
+
+```tsx
+import { Logtail } from '@logtail/node';
+import pino from 'pino';
+
+const logtail = new Logtail(process.env.LOGTAIL_TOKEN!);
+
+export const logger = pino(logtail.stream());
+```
+
+## Contextual Logging
+
+```tsx
+// lib/request-context.ts
+import { AsyncLocalStorage } from 'async_hooks';
+
+interface RequestContext {
+  requestId: string;
+  userId?: string;
+  path: string;
+}
+
+export const requestContext = new AsyncLocalStorage<RequestContext>();
+
+// Use in middleware
+export function middleware(request: NextRequest) {
+  const context: RequestContext = {
+    requestId: crypto.randomUUID(),
+    path: request.nextUrl.pathname,
+  };
+
+  return requestContext.run(context, () => {
+    return NextResponse.next();
+  });
+}
+
+// Logger with automatic context
+export function log(level: LogLevel, message: string, extra?: object) {
+  const context = requestContext.getStore();
+
+  logger[level]({
+    ...context,
+    ...extra,
+  }, message);
+}
+```
+
+## Sensitive Data Redaction
+
+```tsx
+// lib/redact.ts
+const SENSITIVE_KEYS = ['password', 'token', 'secret', 'apiKey', 'creditCard'];
+
+export function redact(obj: object): object {
+  return JSON.parse(
+    JSON.stringify(obj, (key, value) => {
+      if (SENSITIVE_KEYS.some((k) => key.toLowerCase().includes(k.toLowerCase()))) {
+        return '[REDACTED]';
+      }
+      return value;
+    })
+  );
+}
+
+// Usage
+logger.info(redact({ username: 'john', password: 'secret123' }));
+// Output: { username: 'john', password: '[REDACTED]' }
+```
+
+## Log Levels Guide
+
+| Level | Use For | Example |
+|-------|---------|---------|
+| `debug` | Detailed debugging info | Variable values, flow tracing |
+| `info` | General information | User actions, API calls |
+| `warn` | Potential issues | Deprecated usage, slow queries |
+| `error` | Errors that need attention | Failed operations, exceptions |
+
+## Correlation IDs
+
+```tsx
+// Track requests across services
+const correlationId = request.headers.get('x-correlation-id') || crypto.randomUUID();
+
+// Add to all logs
+logger.info({ correlationId, ... }, 'Processing request');
+
+// Pass to downstream services
+fetch('/api/other-service', {
+  headers: {
+    'x-correlation-id': correlationId,
+  },
+});
+```
+
+## Best Practices
+
+1. **Use structured logging** - JSON format for searchability
+2. **Include context** - Request ID, user ID, timestamps
+3. **Choose appropriate levels** - Don't log everything as error
+4. **Redact sensitive data** - Never log passwords or tokens
+5. **Aggregate logs** - Use a logging service in production
+6. **Set up alerts** - Get notified of error spikes

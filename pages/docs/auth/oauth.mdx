@@ -1,0 +1,461 @@
+---
+description: Implement OAuth and social login (Google, GitHub) in React applications.
+---
+
+# OAuth & Social Login
+
+Allow users to sign in with Google, GitHub, and other providers.
+
+## OAuth Flow Overview
+
+```
+1. User clicks "Sign in with Google"
+2. Redirect to Google's auth page
+3. User authorizes your app
+4. Google redirects back with authorization code
+5. Your server exchanges code for tokens
+6. Server creates session/JWT for user
+```
+
+## Next.js with NextAuth.js
+
+The easiest way to add OAuth to Next.js:
+
+```bash
+npm install next-auth
+```
+
+### Basic Setup
+
+```tsx
+// pages/api/auth/[...nextauth].ts
+import NextAuth from 'next-auth';
+import GoogleProvider from 'next-auth/providers/google';
+import GitHubProvider from 'next-auth/providers/github';
+
+export default NextAuth({
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
+  ],
+  pages: {
+    signIn: '/login',
+    error: '/auth/error',
+  },
+  callbacks: {
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id;
+      }
+      if (account) {
+        token.accessToken = account.access_token;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.user.id = token.id as string;
+      session.accessToken = token.accessToken as string;
+      return session;
+    },
+  },
+});
+```
+
+### Session Provider
+
+```tsx
+// pages/_app.tsx
+import { SessionProvider } from 'next-auth/react';
+
+export default function App({ Component, pageProps: { session, ...pageProps } }) {
+  return (
+    <SessionProvider session={session}>
+      <Component {...pageProps} />
+    </SessionProvider>
+  );
+}
+```
+
+### Using Session
+
+```tsx
+// components/user-menu.tsx
+import { useSession, signIn, signOut } from 'next-auth/react';
+
+export function UserMenu() {
+  const { data: session, status } = useSession();
+
+  if (status === 'loading') {
+    return <div>Loading...</div>;
+  }
+
+  if (!session) {
+    return (
+      <div>
+        <button onClick={() => signIn('google')}>Sign in with Google</button>
+        <button onClick={() => signIn('github')}>Sign in with GitHub</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <img src={session.user?.image || ''} alt="Avatar" />
+      <span>{session.user?.name}</span>
+      <button onClick={() => signOut()}>Sign out</button>
+    </div>
+  );
+}
+```
+
+### Login Page
+
+```tsx
+// pages/login.tsx
+import { getProviders, signIn, getSession } from 'next-auth/react';
+import { GetServerSideProps } from 'next';
+
+interface LoginPageProps {
+  providers: Awaited<ReturnType<typeof getProviders>>;
+}
+
+export default function LoginPage({ providers }: LoginPageProps) {
+  return (
+    <div className="login-page">
+      <h1>Sign In</h1>
+
+      {providers &&
+        Object.values(providers).map((provider) => (
+          <button
+            key={provider.name}
+            onClick={() => signIn(provider.id, { callbackUrl: '/dashboard' })}
+            className="oauth-button"
+          >
+            Sign in with {provider.name}
+          </button>
+        ))}
+    </div>
+  );
+}
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await getSession(context);
+
+  if (session) {
+    return {
+      redirect: {
+        destination: '/dashboard',
+        permanent: false,
+      },
+    };
+  }
+
+  const providers = await getProviders();
+
+  return {
+    props: { providers },
+  };
+};
+```
+
+## Manual OAuth Implementation
+
+For non-Next.js apps or custom flows:
+
+### Google OAuth
+
+```tsx
+// config/oauth.ts
+export const googleConfig = {
+  clientId: process.env.REACT_APP_GOOGLE_CLIENT_ID!,
+  redirectUri: `${window.location.origin}/auth/google/callback`,
+  scope: 'openid email profile',
+};
+
+// utils/google-auth.ts
+export function getGoogleAuthUrl() {
+  const params = new URLSearchParams({
+    client_id: googleConfig.clientId,
+    redirect_uri: googleConfig.redirectUri,
+    response_type: 'code',
+    scope: googleConfig.scope,
+    access_type: 'offline',
+    prompt: 'consent',
+  });
+
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
+// Component
+function LoginPage() {
+  const handleGoogleLogin = () => {
+    window.location.href = getGoogleAuthUrl();
+  };
+
+  return (
+    <button onClick={handleGoogleLogin}>
+      Sign in with Google
+    </button>
+  );
+}
+
+// Callback page
+// pages/auth/google/callback.tsx
+function GoogleCallback() {
+  const router = useRouter();
+  const { code, error } = router.query;
+
+  useEffect(() => {
+    if (error) {
+      router.push('/login?error=oauth_failed');
+      return;
+    }
+
+    if (code) {
+      // Send code to your backend
+      fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          // Store token, redirect to dashboard
+          localStorage.setItem('token', data.token);
+          router.push('/dashboard');
+        })
+        .catch(() => {
+          router.push('/login?error=oauth_failed');
+        });
+    }
+  }, [code, error, router]);
+
+  return <div>Authenticating...</div>;
+}
+```
+
+### GitHub OAuth
+
+```tsx
+// utils/github-auth.ts
+export function getGitHubAuthUrl() {
+  const params = new URLSearchParams({
+    client_id: process.env.REACT_APP_GITHUB_CLIENT_ID!,
+    redirect_uri: `${window.location.origin}/auth/github/callback`,
+    scope: 'read:user user:email',
+  });
+
+  return `https://github.com/login/oauth/authorize?${params}`;
+}
+```
+
+## OAuth Popup Window
+
+```tsx
+// utils/oauth-popup.ts
+export function openOAuthPopup(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      url,
+      'OAuth',
+      `width=${width},height=${height},left=${left},top=${top}`
+    );
+
+    if (!popup) {
+      reject(new Error('Popup blocked'));
+      return;
+    }
+
+    // Listen for message from popup
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === 'oauth_success') {
+        window.removeEventListener('message', handleMessage);
+        popup.close();
+        resolve(event.data.code);
+      }
+
+      if (event.data.type === 'oauth_error') {
+        window.removeEventListener('message', handleMessage);
+        popup.close();
+        reject(new Error(event.data.error));
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Check if popup was closed
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        window.removeEventListener('message', handleMessage);
+        reject(new Error('Popup closed'));
+      }
+    }, 1000);
+  });
+}
+
+// Callback page (in popup)
+function OAuthCallback() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const error = params.get('error');
+
+    if (error) {
+      window.opener?.postMessage({ type: 'oauth_error', error }, window.location.origin);
+    } else if (code) {
+      window.opener?.postMessage({ type: 'oauth_success', code }, window.location.origin);
+    }
+  }, []);
+
+  return <div>Completing authentication...</div>;
+}
+
+// Usage
+function LoginButton() {
+  const handleGoogleLogin = async () => {
+    try {
+      const code = await openOAuthPopup(getGoogleAuthUrl());
+      // Exchange code for token
+      const { token } = await exchangeCodeForToken(code);
+      // Store and redirect
+    } catch (error) {
+      console.error('OAuth failed:', error);
+    }
+  };
+
+  return <button onClick={handleGoogleLogin}>Sign in with Google</button>;
+}
+```
+
+## OAuth Button Styling
+
+```tsx
+// components/oauth-buttons.tsx
+const providers = [
+  {
+    id: 'google',
+    name: 'Google',
+    icon: GoogleIcon,
+    bg: 'bg-white hover:bg-gray-50',
+    text: 'text-gray-700',
+    border: 'border border-gray-300',
+  },
+  {
+    id: 'github',
+    name: 'GitHub',
+    icon: GitHubIcon,
+    bg: 'bg-gray-900 hover:bg-gray-800',
+    text: 'text-white',
+    border: '',
+  },
+  {
+    id: 'twitter',
+    name: 'Twitter',
+    icon: TwitterIcon,
+    bg: 'bg-blue-400 hover:bg-blue-500',
+    text: 'text-white',
+    border: '',
+  },
+];
+
+export function OAuthButtons() {
+  return (
+    <div className="space-y-3">
+      {providers.map((provider) => (
+        <button
+          key={provider.id}
+          onClick={() => signIn(provider.id)}
+          className={`
+            w-full flex items-center justify-center gap-3
+            px-4 py-3 rounded-lg font-medium
+            ${provider.bg} ${provider.text} ${provider.border}
+            transition-colors
+          `}
+        >
+          <provider.icon className="w-5 h-5" />
+          Continue with {provider.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+## Linking Multiple Providers
+
+```tsx
+// Allow users to link additional OAuth accounts
+function AccountSettings() {
+  const { data: session } = useSession();
+
+  const linkedProviders = session?.user?.linkedProviders || [];
+
+  const linkProvider = async (provider: string) => {
+    // Redirect to OAuth flow with "link" action
+    signIn(provider, {
+      callbackUrl: '/settings/accounts?linked=true',
+    });
+  };
+
+  return (
+    <div>
+      <h2>Linked Accounts</h2>
+
+      {['google', 'github', 'twitter'].map((provider) => (
+        <div key={provider} className="flex items-center justify-between">
+          <span className="capitalize">{provider}</span>
+
+          {linkedProviders.includes(provider) ? (
+            <span className="text-green-600">Connected</span>
+          ) : (
+            <button onClick={() => linkProvider(provider)}>
+              Connect
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## Environment Variables
+
+```bash
+# .env.local
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# GitHub OAuth
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-random-secret-key
+```
+
+## Best Practices
+
+1. **Use established libraries** - NextAuth, Auth0, Firebase Auth
+2. **Validate tokens on server** - Never trust client-side validation
+3. **Store secrets securely** - Never expose client secrets to frontend
+4. **Handle errors gracefully** - OAuth can fail in many ways
+5. **Provide account linking** - Let users connect multiple providers
+6. **Request minimal scopes** - Only ask for what you need
