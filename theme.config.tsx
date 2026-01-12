@@ -92,6 +92,20 @@ const config: DocsThemeConfig = {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="description" content={description} />
 
+        {/* Structured data for Google site name */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'ReactBlueprint',
+              alternateName: 'React Blueprint',
+              url: 'https://reactblueprint.dev',
+            }),
+          }}
+        />
+
         {/* Open Graph */}
         <meta property="og:url" content={url} />
         <meta property="og:type" content="website" />
@@ -106,7 +120,8 @@ const config: DocsThemeConfig = {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content="https://reactblueprint.dev/logo.png" />
 
-        {/* Favicon - SVG primary, PNG fallback */}
+        {/* Favicon - ico for Google, SVG for modern browsers, PNG fallback */}
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/logo.svg" type="image/svg+xml" />
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
