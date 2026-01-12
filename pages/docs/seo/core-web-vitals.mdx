@@ -1,0 +1,424 @@
+---
+description: Optimize Core Web Vitals (LCP, INP, CLS) to improve user experience and search rankings.
+---
+
+# Core Web Vitals
+
+Core Web Vitals are Google's metrics for measuring user experience. They directly impact search rankings.
+
+## The Three Metrics
+
+### LCP (Largest Contentful Paint)
+
+**What it measures**: How fast the main content loads
+
+| Score | Rating |
+|-------|--------|
+| ≤ 2.5s | Good |
+| 2.5s - 4s | Needs Improvement |
+| > 4s | Poor |
+
+### INP (Interaction to Next Paint)
+
+**What it measures**: How responsive the page is to user interactions
+
+| Score | Rating |
+|-------|--------|
+| ≤ 200ms | Good |
+| 200ms - 500ms | Needs Improvement |
+| > 500ms | Poor |
+
+### CLS (Cumulative Layout Shift)
+
+**What it measures**: Visual stability (elements jumping around)
+
+| Score | Rating |
+|-------|--------|
+| ≤ 0.1 | Good |
+| 0.1 - 0.25 | Needs Improvement |
+| > 0.25 | Poor |
+
+## Measuring Core Web Vitals
+
+### In Development
+
+```tsx
+// Install web-vitals
+npm install web-vitals
+```
+
+```tsx
+// utils/web-vitals.ts
+import { onCLS, onINP, onLCP } from 'web-vitals';
+
+export function reportWebVitals() {
+  onCLS(console.log);
+  onINP(console.log);
+  onLCP(console.log);
+}
+
+// Call in your app entry point
+reportWebVitals();
+```
+
+### Next.js Built-in
+
+```tsx
+// pages/_app.tsx
+export function reportWebVitals(metric) {
+  console.log(metric);
+
+  // Send to analytics
+  if (metric.label === 'web-vital') {
+    analytics.track('Web Vital', {
+      name: metric.name,
+      value: metric.value,
+      rating: metric.rating,
+    });
+  }
+}
+```
+
+### Tools
+
+- **Chrome DevTools** - Lighthouse tab
+- **PageSpeed Insights** - [web.dev/measure](https://pagespeed.web.dev/)
+- **Chrome UX Report** - Real user data in Search Console
+- **Web Vitals Extension** - Chrome extension for live metrics
+
+## Optimizing LCP
+
+### 1. Optimize Images
+
+```tsx
+// Use Next.js Image for automatic optimization
+import Image from 'next/image';
+
+// ✅ Good - Next.js handles optimization
+<Image
+  src="/hero.jpg"
+  alt="Hero"
+  width={1200}
+  height={600}
+  priority  // Preload LCP image
+/>
+
+// ❌ Bad - No optimization
+<img src="/hero.jpg" alt="Hero" />
+```
+
+### 2. Preload Critical Resources
+
+```tsx
+<head>
+  {/* Preload LCP image */}
+  <link
+    rel="preload"
+    as="image"
+    href="/hero-image.webp"
+  />
+
+  {/* Preload critical font */}
+  <link
+    rel="preload"
+    as="font"
+    type="font/woff2"
+    href="/fonts/inter.woff2"
+    crossOrigin="anonymous"
+  />
+</head>
+```
+
+### 3. Reduce Server Response Time
+
+```tsx
+// Use static generation when possible
+export async function getStaticProps() {
+  const data = await fetchData();
+  return {
+    props: { data },
+    revalidate: 3600, // ISR: regenerate hourly
+  };
+}
+```
+
+### 4. Optimize CSS Delivery
+
+```tsx
+// Inline critical CSS
+<style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
+
+// Defer non-critical CSS
+<link
+  rel="preload"
+  href="/styles/non-critical.css"
+  as="style"
+  onLoad="this.onload=null;this.rel='stylesheet'"
+/>
+```
+
+## Optimizing INP
+
+### 1. Break Up Long Tasks
+
+```tsx
+// ❌ Bad - Blocks main thread
+function processData(items) {
+  items.forEach(item => heavyOperation(item));
+}
+
+// ✅ Good - Yields to main thread
+async function processData(items) {
+  for (const item of items) {
+    heavyOperation(item);
+    // Yield to allow browser to handle events
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+}
+```
+
+### 2. Use Web Workers for Heavy Computation
+
+```tsx
+// worker.ts
+self.onmessage = (e) => {
+  const result = heavyComputation(e.data);
+  self.postMessage(result);
+};
+
+// component.tsx
+const worker = new Worker(new URL('./worker.ts', import.meta.url));
+
+function handleClick() {
+  worker.postMessage(data);
+  worker.onmessage = (e) => setResult(e.data);
+}
+```
+
+### 3. Optimize Event Handlers
+
+```tsx
+// ❌ Bad - Expensive operation on every click
+<button onClick={() => {
+  const result = expensiveCalculation();
+  setData(result);
+}}>Click</button>
+
+// ✅ Good - Defer expensive work
+<button onClick={() => {
+  // Show immediate feedback
+  setLoading(true);
+
+  // Defer expensive work
+  requestIdleCallback(() => {
+    const result = expensiveCalculation();
+    setData(result);
+    setLoading(false);
+  });
+}}>Click</button>
+```
+
+### 4. Debounce Input Handlers
+
+```tsx
+import { useDebouncedCallback } from 'use-debounce';
+
+function SearchInput() {
+  const [query, setQuery] = useState('');
+
+  const debouncedSearch = useDebouncedCallback(
+    (value) => performSearch(value),
+    300
+  );
+
+  return (
+    <input
+      value={query}
+      onChange={(e) => {
+        setQuery(e.target.value);
+        debouncedSearch(e.target.value);
+      }}
+    />
+  );
+}
+```
+
+## Optimizing CLS
+
+### 1. Set Explicit Dimensions
+
+```tsx
+// ✅ Good - Explicit dimensions prevent layout shift
+<Image
+  src="/photo.jpg"
+  alt="Photo"
+  width={800}
+  height={600}
+/>
+
+// ✅ Good - Aspect ratio container
+<div style={{ aspectRatio: '16/9' }}>
+  <img src="/video-thumbnail.jpg" alt="Thumbnail" />
+</div>
+
+// ❌ Bad - No dimensions
+<img src="/photo.jpg" alt="Photo" />
+```
+
+### 2. Reserve Space for Dynamic Content
+
+```tsx
+// ✅ Good - Reserve space for ad
+<div style={{ minHeight: '250px' }}>
+  <AdComponent />
+</div>
+
+// ✅ Good - Skeleton while loading
+{isLoading ? (
+  <div className="h-48 bg-gray-200 animate-pulse" />
+) : (
+  <DynamicContent data={data} />
+)}
+```
+
+### 3. Avoid Inserting Content Above Existing
+
+```tsx
+// ❌ Bad - Banner pushes content down
+{showBanner && <Banner />}
+<MainContent />
+
+// ✅ Good - Banner has reserved space
+<div style={{ minHeight: showBanner ? '60px' : '0' }}>
+  {showBanner && <Banner />}
+</div>
+<MainContent />
+```
+
+### 4. Font Loading Strategy
+
+```tsx
+// Prevent font swap layout shift
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('/fonts/inter.woff2') format('woff2');
+    font-display: optional; /* or 'swap' with size-adjust */
+  }
+</style>
+```
+
+```tsx
+// Next.js font optimization
+import { Inter } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+});
+```
+
+## React-Specific Optimizations
+
+### Use Suspense for Loading States
+
+```tsx
+import { Suspense } from 'react';
+
+function App() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <HeavyComponent />
+    </Suspense>
+  );
+}
+```
+
+### Lazy Load Below-the-Fold Content
+
+```tsx
+import { lazy, Suspense } from 'react';
+
+const Comments = lazy(() => import('./Comments'));
+
+function BlogPost() {
+  return (
+    <>
+      <Article />
+      <Suspense fallback={<CommentsSkeleton />}>
+        <Comments />
+      </Suspense>
+    </>
+  );
+}
+```
+
+### Use React.memo for Expensive Components
+
+```tsx
+const ExpensiveList = React.memo(function ExpensiveList({ items }) {
+  return (
+    <ul>
+      {items.map(item => (
+        <li key={item.id}>{item.name}</li>
+      ))}
+    </ul>
+  );
+});
+```
+
+## Monitoring in Production
+
+### Send to Analytics
+
+```tsx
+import { onCLS, onINP, onLCP } from 'web-vitals';
+
+function sendToAnalytics({ name, delta, rating, id }) {
+  // Google Analytics 4
+  gtag('event', name, {
+    value: delta,
+    metric_id: id,
+    metric_value: delta,
+    metric_rating: rating,
+  });
+}
+
+onCLS(sendToAnalytics);
+onINP(sendToAnalytics);
+onLCP(sendToAnalytics);
+```
+
+### Vercel Analytics
+
+```tsx
+// Automatic Core Web Vitals tracking
+npm install @vercel/analytics
+
+// app/layout.tsx
+import { Analytics } from '@vercel/analytics/react';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
+  );
+}
+```
+
+## Quick Wins Checklist
+
+- [ ] Add `priority` to LCP images
+- [ ] Set width/height on all images
+- [ ] Use `next/image` or optimize images
+- [ ] Preload critical fonts
+- [ ] Use `font-display: swap` or `optional`
+- [ ] Add loading skeletons for dynamic content
+- [ ] Debounce search/filter inputs
+- [ ] Lazy load below-fold components
+- [ ] Avoid layout shifts from ads/embeds
+- [ ] Monitor with real user data

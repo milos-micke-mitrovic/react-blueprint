@@ -1,0 +1,181 @@
+---
+description: Essential meta tags for React applications to improve search engine visibility.
+---
+
+# Meta Tags
+
+Meta tags tell search engines what your page is about. They're crucial for SEO.
+
+## Essential Meta Tags
+
+Every page should have these:
+
+```tsx
+// Using React Helmet or Next.js Head
+<head>
+  <title>Page Title - Site Name</title>
+  <meta name="description" content="A clear description of the page (150-160 chars)" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="canonical" href="https://yoursite.com/current-page" />
+</head>
+```
+
+## Title Tag Best Practices
+
+```tsx
+// ✅ Good - Descriptive, includes keywords, under 60 chars
+<title>React State Management Guide - ReactBlueprint</title>
+
+// ❌ Bad - Too generic
+<title>Home</title>
+
+// ❌ Bad - Too long (will be truncated)
+<title>The Complete Ultimate Guide to React State Management with Zustand and TanStack Query for 2024</title>
+```
+
+**Rules:**
+- Keep under 60 characters
+- Put important keywords first
+- Include your brand name at the end
+- Make each page title unique
+
+## Meta Description
+
+```tsx
+// ✅ Good - Clear, actionable, includes keywords
+<meta
+  name="description"
+  content="Learn React state management patterns with Zustand and TanStack Query. Practical examples and best practices for scalable apps."
+/>
+
+// ❌ Bad - Too short
+<meta name="description" content="React guide" />
+
+// ❌ Bad - Keyword stuffing
+<meta name="description" content="React React state React management React Zustand React Query React" />
+```
+
+**Rules:**
+- Keep between 150-160 characters
+- Include a call-to-action when relevant
+- Make it compelling (it shows in search results)
+- Each page should have a unique description
+
+## Canonical URL
+
+Prevents duplicate content issues:
+
+```tsx
+// On page: https://yoursite.com/blog/react-guide
+<link rel="canonical" href="https://yoursite.com/blog/react-guide" />
+
+// If same content exists at multiple URLs, point to the main one
+// https://yoursite.com/blog/react-guide?utm_source=twitter
+// Should canonicalize to:
+<link rel="canonical" href="https://yoursite.com/blog/react-guide" />
+```
+
+## Implementation in React
+
+### With React Helmet
+
+```bash
+npm install react-helmet-async
+```
+
+```tsx
+import { Helmet } from 'react-helmet-async';
+
+function ProductPage({ product }) {
+  return (
+    <>
+      <Helmet>
+        <title>{product.name} - MyStore</title>
+        <meta name="description" content={product.description.slice(0, 160)} />
+        <link rel="canonical" href={`https://mystore.com/products/${product.slug}`} />
+      </Helmet>
+
+      {/* Page content */}
+    </>
+  );
+}
+```
+
+### With Next.js
+
+```tsx
+// app/products/[slug]/page.tsx (App Router)
+import { Metadata } from 'next';
+
+export async function generateMetadata({ params }): Promise<Metadata> {
+  const product = await getProduct(params.slug);
+
+  return {
+    title: `${product.name} - MyStore`,
+    description: product.description.slice(0, 160),
+    alternates: {
+      canonical: `https://mystore.com/products/${product.slug}`,
+    },
+  };
+}
+```
+
+### Dynamic Meta Tags Component
+
+```tsx
+// components/seo.tsx
+interface SEOProps {
+  title: string;
+  description: string;
+  canonical?: string;
+  noIndex?: boolean;
+}
+
+export function SEO({ title, description, canonical, noIndex = false }: SEOProps) {
+  const siteUrl = 'https://yoursite.com';
+  const fullTitle = `${title} - YourSite`;
+
+  return (
+    <Helmet>
+      <title>{fullTitle}</title>
+      <meta name="description" content={description} />
+      {canonical && <link rel="canonical" href={`${siteUrl}${canonical}`} />}
+      {noIndex && <meta name="robots" content="noindex, nofollow" />}
+    </Helmet>
+  );
+}
+
+// Usage
+<SEO
+  title="React State Guide"
+  description="Learn state management patterns..."
+  canonical="/docs/state"
+/>
+```
+
+## Robots Meta Tag
+
+Control how search engines index your page:
+
+```tsx
+// Allow indexing (default)
+<meta name="robots" content="index, follow" />
+
+// Prevent indexing (for private pages, staging, etc.)
+<meta name="robots" content="noindex, nofollow" />
+
+// Index but don't follow links
+<meta name="robots" content="index, nofollow" />
+
+// Don't show in search results after a date
+<meta name="robots" content="unavailable_after: 2025-12-31" />
+```
+
+## Common Mistakes
+
+1. **Missing meta description** - Google will auto-generate one (often poorly)
+2. **Duplicate titles** - Every page needs a unique title
+3. **Title too long** - Gets cut off in search results
+4. **Keyword stuffing** - Google penalizes this
+5. **Missing canonical** - Causes duplicate content issues
+6. **Forgetting trailing slashes** - `/page` and `/page/` are different URLs
