@@ -1,0 +1,276 @@
+---
+description: Generate sitemaps and configure robots.txt to help search engines discover and crawl your pages.
+---
+
+# Sitemap & Robots.txt
+
+Sitemaps help search engines discover your pages. Robots.txt controls what they can crawl.
+
+## What Is a Sitemap?
+
+A sitemap is an XML file listing all pages you want search engines to index:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://yoursite.com/</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://yoursite.com/about</loc>
+    <lastmod>2024-01-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
+```
+
+## Next.js Sitemap Generation
+
+### Using next-sitemap
+
+The easiest way to generate sitemaps in Next.js:
+
+```bash
+npm install next-sitemap
+```
+
+Create `next-sitemap.config.js`:
+
+```js
+/** @type {import('next-sitemap').IConfig} */
+module.exports = {
+  siteUrl: 'https://yoursite.com',
+  generateRobotsTxt: true,
+  changefreq: 'weekly',
+  priority: 0.7,
+  sitemapSize: 5000,
+  exclude: ['/admin/*', '/api/*', '/private/*'],
+  robotsTxtOptions: {
+    additionalSitemaps: [
+      'https://yoursite.com/server-sitemap.xml',
+    ],
+    policies: [
+      { userAgent: '*', allow: '/' },
+      { userAgent: '*', disallow: ['/admin', '/api', '/private'] },
+    ],
+  },
+};
+```
+
+Add to `package.json`:
+
+```json
+{
+  "scripts": {
+    "build": "next build",
+    "postbuild": "next-sitemap"
+  }
+}
+```
+
+### App Router (Dynamic Sitemap)
+
+```tsx
+// app/sitemap.ts
+import { MetadataRoute } from 'next';
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = 'https://yoursite.com';
+
+  // Static pages
+  const staticPages = [
+    { url: baseUrl, lastModified: new Date(), priority: 1.0 },
+    { url: `${baseUrl}/about`, lastModified: new Date(), priority: 0.8 },
+    { url: `${baseUrl}/docs`, lastModified: new Date(), priority: 0.9 },
+  ];
+
+  // Dynamic pages (from database/CMS)
+  const posts = await getPosts();
+  const postPages = posts.map((post) => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: new Date(post.updatedAt),
+    priority: 0.7,
+  }));
+
+  return [...staticPages, ...postPages];
+}
+```
+
+### Server-Side Sitemap (for large sites)
+
+```tsx
+// pages/server-sitemap.xml.tsx
+import { getServerSideSitemapLegacy } from 'next-sitemap';
+import { GetServerSideProps } from 'next';
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const posts = await fetch('https://api.yoursite.com/posts').then(r => r.json());
+
+  const fields = posts.map((post) => ({
+    loc: `https://yoursite.com/blog/${post.slug}`,
+    lastmod: post.updatedAt,
+    changefreq: 'weekly',
+    priority: 0.7,
+  }));
+
+  return getServerSideSitemapLegacy(ctx, fields);
+};
+
+export default function Sitemap() {}
+```
+
+## Robots.txt
+
+Controls which pages search engines can crawl.
+
+### Basic robots.txt
+
+```txt
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Block specific paths
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+
+# Sitemap location
+Sitemap: https://yoursite.com/sitemap.xml
+```
+
+### Next.js App Router
+
+```tsx
+// app/robots.ts
+import { MetadataRoute } from 'next';
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      {
+        userAgent: '*',
+        allow: '/',
+        disallow: ['/admin/', '/api/', '/private/'],
+      },
+    ],
+    sitemap: 'https://yoursite.com/sitemap.xml',
+  };
+}
+```
+
+### Environment-Based Blocking
+
+Block staging/preview environments:
+
+```tsx
+// app/robots.ts
+export default function robots(): MetadataRoute.Robots {
+  const isProduction = process.env.VERCEL_ENV === 'production';
+
+  if (!isProduction) {
+    return {
+      rules: { userAgent: '*', disallow: '/' },
+    };
+  }
+
+  return {
+    rules: { userAgent: '*', allow: '/' },
+    sitemap: 'https://yoursite.com/sitemap.xml',
+  };
+}
+```
+
+## Sitemap Index (Large Sites)
+
+For sites with 50,000+ URLs, use a sitemap index:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://yoursite.com/sitemap-pages.xml</loc>
+    <lastmod>2024-01-15</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://yoursite.com/sitemap-blog.xml</loc>
+    <lastmod>2024-01-15</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://yoursite.com/sitemap-products.xml</loc>
+    <lastmod>2024-01-15</lastmod>
+  </sitemap>
+</sitemapindex>
+```
+
+## Submitting to Search Engines
+
+### Google Search Console
+
+1. Go to [Google Search Console](https://search.google.com/search-console)
+2. Select your property
+3. Navigate to Sitemaps
+4. Enter your sitemap URL: `https://yoursite.com/sitemap.xml`
+5. Click Submit
+
+### Bing Webmaster Tools
+
+1. Go to [Bing Webmaster Tools](https://www.bing.com/webmasters)
+2. Add your site
+3. Submit sitemap URL
+
+## Priority and Change Frequency
+
+| Priority | Use For |
+|----------|---------|
+| 1.0 | Homepage |
+| 0.8-0.9 | Main category/section pages |
+| 0.6-0.7 | Blog posts, product pages |
+| 0.4-0.5 | Less important pages |
+
+| Change Frequency | Use For |
+|------------------|---------|
+| `always` | Pages that change every visit |
+| `hourly` | News, real-time data |
+| `daily` | Blog index, forums |
+| `weekly` | Blog posts, docs |
+| `monthly` | About pages, contact |
+| `yearly` | Terms, privacy policy |
+| `never` | Archived content |
+
+## Verifying Your Setup
+
+### Check Sitemap
+
+Visit `https://yoursite.com/sitemap.xml` directly
+
+### Check Robots.txt
+
+Visit `https://yoursite.com/robots.txt` directly
+
+### Google's Tools
+
+- **Robots.txt Tester**: In Search Console under Crawl
+- **URL Inspection**: Test if specific URLs are indexed
+
+## Common Mistakes
+
+1. **Missing sitemap** - Always have one, even for small sites
+2. **Blocking sitemap in robots.txt** - Don't block `/sitemap.xml`
+3. **Wrong URLs** - Use absolute URLs with correct protocol (https)
+4. **Outdated lastmod** - Update when content actually changes
+5. **Including noindex pages** - Don't add pages you don't want indexed
+6. **Blocking production** - Don't copy staging robots.txt to production
+7. **Forgetting trailing slashes** - Be consistent (`/page` vs `/page/`)
+
+## Best Practices
+
+1. **Keep sitemap updated** - Regenerate on each build
+2. **Use lastmod accurately** - Only update when content changes
+3. **Limit size** - Max 50,000 URLs or 50MB per sitemap
+4. **Submit to search engines** - Don't just create, submit it
+5. **Monitor in Search Console** - Check for errors regularly

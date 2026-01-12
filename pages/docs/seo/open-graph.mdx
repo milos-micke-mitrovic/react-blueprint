@@ -1,0 +1,241 @@
+---
+description: Configure Open Graph and Twitter Card meta tags for beautiful social media previews.
+---
+
+# Open Graph & Social Sharing
+
+When someone shares your link on social media, these tags control how it looks.
+
+## What Users See
+
+Without Open Graph tags:
+```
+yoursite.com
+```
+
+With Open Graph tags:
+```
+┌─────────────────────────────────┐
+│  [Large Preview Image]          │
+│                                 │
+│  Your Page Title                │
+│  A compelling description that  │
+│  makes people want to click...  │
+│  yoursite.com                   │
+└─────────────────────────────────┘
+```
+
+## Essential Open Graph Tags
+
+```tsx
+<head>
+  {/* Basic OG tags */}
+  <meta property="og:title" content="Your Page Title" />
+  <meta property="og:description" content="A compelling description" />
+  <meta property="og:image" content="https://yoursite.com/og-image.png" />
+  <meta property="og:url" content="https://yoursite.com/current-page" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Your Site Name" />
+</head>
+```
+
+## Twitter Card Tags
+
+Twitter uses its own tags (falls back to OG if missing):
+
+```tsx
+<head>
+  {/* Twitter Card */}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Your Page Title" />
+  <meta name="twitter:description" content="A compelling description" />
+  <meta name="twitter:image" content="https://yoursite.com/twitter-image.png" />
+  <meta name="twitter:site" content="@yourhandle" />
+  <meta name="twitter:creator" content="@authorhandle" />
+</head>
+```
+
+### Twitter Card Types
+
+| Type | Description |
+|------|-------------|
+| `summary` | Small square image with title and description |
+| `summary_large_image` | Large image above title and description |
+| `player` | Video/audio player |
+| `app` | App download card |
+
+## Image Requirements
+
+### Open Graph Image
+
+```
+Recommended size: 1200 x 630 pixels
+Minimum size: 600 x 315 pixels
+Aspect ratio: 1.91:1
+Format: PNG, JPEG
+Max file size: < 8MB
+```
+
+### Twitter Image
+
+```
+Large image: 1200 x 628 pixels (2:1 ratio)
+Summary: 144 x 144 pixels (1:1 ratio)
+Format: PNG, JPEG, GIF (no animated)
+Max file size: < 5MB
+```
+
+## Complete Implementation
+
+```tsx
+// components/social-meta.tsx
+interface SocialMetaProps {
+  title: string;
+  description: string;
+  image?: string;
+  url: string;
+  type?: 'website' | 'article';
+  publishedTime?: string;
+  author?: string;
+}
+
+export function SocialMeta({
+  title,
+  description,
+  image = '/default-og-image.png',
+  url,
+  type = 'website',
+  publishedTime,
+  author,
+}: SocialMetaProps) {
+  const siteUrl = 'https://yoursite.com';
+  const fullImageUrl = image.startsWith('http') ? image : `${siteUrl}${image}`;
+  const fullUrl = `${siteUrl}${url}`;
+
+  return (
+    <Helmet>
+      {/* Open Graph */}
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      <meta property="og:image" content={fullImageUrl} />
+      <meta property="og:url" content={fullUrl} />
+      <meta property="og:type" content={type} />
+      <meta property="og:site_name" content="YourSite" />
+
+      {/* Article specific */}
+      {type === 'article' && publishedTime && (
+        <meta property="article:published_time" content={publishedTime} />
+      )}
+      {type === 'article' && author && (
+        <meta property="article:author" content={author} />
+      )}
+
+      {/* Twitter */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={fullImageUrl} />
+      <meta name="twitter:site" content="@yoursite" />
+    </Helmet>
+  );
+}
+```
+
+## Next.js App Router
+
+```tsx
+// app/blog/[slug]/page.tsx
+import { Metadata } from 'next';
+
+export async function generateMetadata({ params }): Promise<Metadata> {
+  const post = await getPost(params.slug);
+
+  return {
+    title: post.title,
+    description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      url: `https://yoursite.com/blog/${params.slug}`,
+      siteName: 'YourSite',
+      images: [
+        {
+          url: post.image,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
+      type: 'article',
+      publishedTime: post.publishedAt,
+      authors: [post.author],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: post.excerpt,
+      images: [post.image],
+    },
+  };
+}
+```
+
+## Dynamic OG Images
+
+Generate images on-the-fly for each page:
+
+```tsx
+// pages/api/og.tsx (Next.js)
+import { ImageResponse } from '@vercel/og';
+
+export const config = {
+  runtime: 'edge',
+};
+
+export default function handler(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const title = searchParams.get('title') || 'Default Title';
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#1a1a1a',
+          color: 'white',
+        }}
+      >
+        <div style={{ fontSize: 60, fontWeight: 'bold' }}>{title}</div>
+        <div style={{ fontSize: 30, marginTop: 20 }}>yoursite.com</div>
+      </div>
+    ),
+    {
+      width: 1200,
+      height: 630,
+    }
+  );
+}
+
+// Usage in meta tags
+<meta property="og:image" content="https://yoursite.com/api/og?title=My%20Page" />
+```
+
+## Testing Tools
+
+- **Facebook Debugger**: https://developers.facebook.com/tools/debug/
+- **Twitter Card Validator**: https://cards-dev.twitter.com/validator
+- **LinkedIn Post Inspector**: https://www.linkedin.com/post-inspector/
+- **OpenGraph.xyz**: https://www.opengraph.xyz/
+
+## Common Mistakes
+
+1. **Image too small** - Use at least 1200x630 for best results
+2. **Relative image URLs** - Always use absolute URLs (`https://...`)
+3. **Missing og:url** - Should match the canonical URL
+4. **Same image for all pages** - Create unique images when possible
+5. **Not testing** - Always validate with debugging tools before launch

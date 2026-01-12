@@ -1,0 +1,226 @@
+---
+description: Set up favicons correctly for browsers, mobile devices, and Google search results.
+---
+
+# Favicon Setup
+
+Favicons are the small icons that appear in browser tabs, bookmarks, and Google search results.
+
+## Why Favicons Matter
+
+- **Brand recognition** in browser tabs
+- **Google search results** show favicons next to URLs
+- **Mobile home screen** icons when users save your site
+- **Bookmarks** display your icon
+
+## Required Files
+
+For complete browser and search engine support:
+
+```
+public/
+├── favicon.ico          # Required for Google (32x32 or 16x16)
+├── favicon.svg          # Modern browsers (scalable)
+├── favicon-16x16.png    # Classic small size
+├── favicon-32x32.png    # Classic standard size
+├── apple-touch-icon.png # iOS home screen (180x180)
+├── android-chrome-192x192.png  # Android (PWA)
+├── android-chrome-512x512.png  # Android splash (PWA)
+└── site.webmanifest     # PWA manifest
+```
+
+## Google Search Requirements
+
+Google has specific requirements for showing favicons in search results:
+
+1. **File must be at root**: `/favicon.ico` (not in subdirectory)
+2. **Minimum size**: 48x48 pixels (multiples of 48 recommended)
+3. **File must be crawlable**: Not blocked by robots.txt
+4. **Guidelines compliant**: No inappropriate content
+
+```tsx
+// In your HTML head
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+```
+
+## HTML Implementation
+
+```tsx
+<head>
+  {/* Standard favicon */}
+  <link rel="icon" href="/favicon.ico" sizes="32x32" />
+
+  {/* SVG favicon (modern browsers) */}
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+  {/* PNG fallback */}
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+
+  {/* Apple touch icon */}
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+  {/* Android/PWA */}
+  <link rel="manifest" href="/site.webmanifest" />
+
+  {/* Theme color for mobile browsers */}
+  <meta name="theme-color" content="#f97316" />
+</head>
+```
+
+## Next.js Implementation
+
+### App Router (app/layout.tsx)
+
+```tsx
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
+};
+```
+
+### Pages Router (pages/_document.tsx)
+
+```tsx
+import { Html, Head, Main, NextScript } from 'next/document';
+
+export default function Document() {
+  return (
+    <Html>
+      <Head>
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      </Head>
+      <body>
+        <Main />
+        <NextScript />
+      </body>
+    </Html>
+  );
+}
+```
+
+## SVG Favicons
+
+SVG favicons are ideal because they scale perfectly:
+
+```svg
+<!-- public/favicon.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="20" fill="#f97316"/>
+  <text x="50" y="70" font-size="60" text-anchor="middle" fill="white">R</text>
+</svg>
+```
+
+### Dark Mode Support
+
+SVG favicons can adapt to dark mode:
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>
+    rect { fill: #f97316; }
+    text { fill: white; }
+    @media (prefers-color-scheme: dark) {
+      rect { fill: #fb923c; }
+    }
+  </style>
+  <rect width="100" height="100" rx="20"/>
+  <text x="50" y="70" font-size="60" text-anchor="middle">R</text>
+</svg>
+```
+
+## Web App Manifest
+
+For PWA support, create `site.webmanifest`:
+
+```json
+{
+  "name": "Your Site Name",
+  "short_name": "YourSite",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#f97316",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}
+```
+
+## Generating Favicons
+
+### From a Single Image
+
+Use tools like [RealFaviconGenerator](https://realfavicongenerator.net/) to generate all sizes from one image.
+
+### Using Sharp (Node.js)
+
+```js
+// scripts/generate-favicons.js
+const sharp = require('sharp');
+
+async function generateFavicons() {
+  const input = 'source-logo.png';
+
+  // Standard sizes
+  await sharp(input).resize(16, 16).toFile('public/favicon-16x16.png');
+  await sharp(input).resize(32, 32).toFile('public/favicon-32x32.png');
+  await sharp(input).resize(180, 180).toFile('public/apple-touch-icon.png');
+  await sharp(input).resize(192, 192).toFile('public/android-chrome-192x192.png');
+  await sharp(input).resize(512, 512).toFile('public/android-chrome-512x512.png');
+
+  // ICO format (requires ico-encoder or similar)
+  await sharp(input).resize(32, 32).toFile('public/favicon.ico');
+}
+
+generateFavicons();
+```
+
+## Testing
+
+1. **Browser tabs**: Open your site and check the tab icon
+2. **Bookmarks**: Bookmark the page and verify the icon appears
+3. **Google Search Console**: Check for favicon errors
+4. **Mobile**: Add to home screen on iOS/Android
+
+## Google Search Timeline
+
+After deploying favicon changes:
+
+- Google recrawls your site within **days to weeks**
+- Favicon appears in search results after **1-4 weeks**
+- Use Google Search Console to request reindexing
+
+## Common Mistakes
+
+1. **No favicon.ico** - Google requires this specific file
+2. **Wrong location** - Must be at root (`/favicon.ico`)
+3. **Blocked by robots.txt** - Google can't crawl it
+4. **Too small** - Use at least 48x48 for Google
+5. **Not square** - Favicons should be 1:1 ratio
+6. **Only SVG** - Include ICO/PNG for older browsers
+
+## Browser Support
+
+| Format | Chrome | Firefox | Safari | Edge |
+|--------|--------|---------|--------|------|
+| `.ico` | ✅ | ✅ | ✅ | ✅ |
+| `.png` | ✅ | ✅ | ✅ | ✅ |
+| `.svg` | ✅ | ✅ | ✅ | ✅ |

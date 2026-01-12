@@ -1,0 +1,270 @@
+---
+description: Add structured data (Schema.org) to help Google understand and display your content better.
+---
+
+# Structured Data
+
+Structured data helps Google understand your content and can enable rich results in search.
+
+## What Are Rich Results?
+
+With structured data, your search result can show:
+- Star ratings
+- Prices
+- FAQs directly in search
+- Breadcrumbs
+- Site name instead of domain
+
+## JSON-LD Format
+
+Google recommends JSON-LD format:
+
+```tsx
+<script type="application/ld+json">
+  {JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Your Site Name",
+    "url": "https://yoursite.com"
+  })}
+</script>
+```
+
+## Common Schema Types
+
+### WebSite (Site Name in Search)
+
+```tsx
+// This makes Google show "YourSite" instead of "yoursite.com"
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "YourSite",
+  "alternateName": "Your Site Full Name",
+  "url": "https://yoursite.com"
+};
+```
+
+### Organization
+
+```tsx
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Your Company",
+  "url": "https://yoursite.com",
+  "logo": "https://yoursite.com/logo.png",
+  "sameAs": [
+    "https://twitter.com/yourcompany",
+    "https://github.com/yourcompany",
+    "https://linkedin.com/company/yourcompany"
+  ],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "email": "contact@yoursite.com",
+    "contactType": "customer service"
+  }
+};
+```
+
+### Breadcrumbs
+
+```tsx
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://yoursite.com"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://yoursite.com/docs"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "SEO",
+      "item": "https://yoursite.com/docs/seo"
+    }
+  ]
+};
+```
+
+### Article / Blog Post
+
+```tsx
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "How to Implement SEO in React",
+  "description": "A complete guide to SEO in React applications",
+  "image": "https://yoursite.com/article-image.png",
+  "datePublished": "2024-01-15T08:00:00+00:00",
+  "dateModified": "2024-01-20T10:30:00+00:00",
+  "author": {
+    "@type": "Person",
+    "name": "John Doe",
+    "url": "https://yoursite.com/authors/john"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "YourSite",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://yoursite.com/logo.png"
+    }
+  }
+};
+```
+
+### FAQ Page
+
+```tsx
+// Enables FAQ rich results directly in Google
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is React?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "React is a JavaScript library for building user interfaces."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is React free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, React is free and open-source under the MIT license."
+      }
+    }
+  ]
+};
+```
+
+### Product
+
+```tsx
+const productSchema = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Premium React Course",
+  "description": "Learn React from scratch",
+  "image": "https://yoursite.com/course-image.png",
+  "brand": {
+    "@type": "Brand",
+    "name": "YourSite"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "99.00",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.8",
+    "reviewCount": "256"
+  }
+};
+```
+
+## React Implementation
+
+### Structured Data Component
+
+```tsx
+// components/structured-data.tsx
+interface StructuredDataProps {
+  data: Record<string, unknown>;
+}
+
+export function StructuredData({ data }: StructuredDataProps) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+// Usage
+<StructuredData data={articleSchema} />
+```
+
+### Multiple Schemas
+
+```tsx
+// You can include multiple schemas on one page
+function BlogPost({ post }) {
+  const articleSchema = { /* ... */ };
+  const breadcrumbSchema = { /* ... */ };
+  const websiteSchema = { /* ... */ };
+
+  return (
+    <>
+      <StructuredData data={websiteSchema} />
+      <StructuredData data={breadcrumbSchema} />
+      <StructuredData data={articleSchema} />
+
+      {/* Page content */}
+    </>
+  );
+}
+```
+
+### Next.js App Router
+
+```tsx
+// app/layout.tsx
+export default function RootLayout({ children }) {
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "YourSite",
+    "url": "https://yoursite.com"
+  };
+
+  return (
+    <html>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+## Testing Structured Data
+
+1. **Google Rich Results Test**: https://search.google.com/test/rich-results
+2. **Schema Markup Validator**: https://validator.schema.org/
+
+## Best Practices
+
+1. **Use JSON-LD** - Google's preferred format
+2. **Be accurate** - Only mark up content that's visible on the page
+3. **Don't spam** - Don't add irrelevant schemas
+4. **Test before deploying** - Use Google's testing tools
+5. **Keep updated** - Update dates when content changes
+
+## Common Mistakes
+
+1. **Marking up hidden content** - Schema should match visible content
+2. **Fake reviews** - Google penalizes fake ratings
+3. **Wrong schema type** - Use the most specific type that applies
+4. **Missing required fields** - Check schema.org for required properties
+5. **Invalid JSON** - Always validate your JSON-LD
