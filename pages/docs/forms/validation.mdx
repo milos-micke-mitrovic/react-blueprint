@@ -1,0 +1,420 @@
+---
+description: Type-safe form validation with Zod and React Hook Form integration.
+---
+
+# Zod Validation
+
+Zod provides type-safe schema validation that integrates perfectly with React Hook Form.
+
+## Installation
+
+```bash
+npm install zod @hookform/resolvers
+```
+
+## Basic Schema
+
+```tsx
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+// Define schema
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+// Infer TypeScript type from schema
+type LoginForm = z.infer<typeof loginSchema>;
+
+// Use in form
+function LoginForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('email')} />
+      {errors.email && <span>{errors.email.message}</span>}
+
+      <input type="password" {...register('password')} />
+      {errors.password && <span>{errors.password.message}</span>}
+
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+```
+
+## Common Validations
+
+### Strings
+
+```tsx
+const schema = z.object({
+  // Required
+  name: z.string().min(1, 'Name is required'),
+
+  // Email
+  email: z.string().email('Invalid email'),
+
+  // URL
+  website: z.string().url('Invalid URL'),
+
+  // Length constraints
+  username: z
+    .string()
+    .min(3, 'Min 3 characters')
+    .max(20, 'Max 20 characters'),
+
+  // Regex pattern
+  phone: z.string().regex(/^\d{10}$/, 'Must be 10 digits'),
+
+  // Trim whitespace
+  bio: z.string().trim(),
+
+  // Optional field
+  nickname: z.string().optional(),
+
+  // Optional but validated if present
+  twitter: z.string().url().optional().or(z.literal('')),
+});
+```
+
+### Numbers
+
+```tsx
+const schema = z.object({
+  // Basic number
+  age: z.number().min(18, 'Must be 18+'),
+
+  // From string input (forms always return strings)
+  quantity: z.coerce.number().min(1).max(100),
+
+  // Price with 2 decimals
+  price: z.coerce.number().multipleOf(0.01),
+
+  // Integer only
+  count: z.coerce.number().int('Must be a whole number'),
+
+  // Positive number
+  amount: z.coerce.number().positive('Must be positive'),
+});
+```
+
+### Booleans
+
+```tsx
+const schema = z.object({
+  // Must be checked
+  acceptTerms: z.literal(true, {
+    errorMap: () => ({ message: 'You must accept the terms' }),
+  }),
+
+  // Optional checkbox
+  newsletter: z.boolean().optional(),
+});
+```
+
+### Dates
+
+```tsx
+const schema = z.object({
+  // Date from string input
+  birthDate: z.coerce.date(),
+
+  // With constraints
+  eventDate: z.coerce
+    .date()
+    .min(new Date(), 'Date must be in the future'),
+
+  // Optional date
+  deadline: z.coerce.date().optional(),
+});
+```
+
+### Enums
+
+```tsx
+const schema = z.object({
+  // String enum
+  role: z.enum(['admin', 'user', 'guest'], {
+    errorMap: () => ({ message: 'Select a valid role' }),
+  }),
+
+  // With TypeScript enum
+  status: z.nativeEnum(OrderStatus),
+});
+
+// Usage
+enum OrderStatus {
+  Pending = 'pending',
+  Shipped = 'shipped',
+  Delivered = 'delivered',
+}
+```
+
+## Advanced Validation
+
+### Password Confirmation
+
+```tsx
+const signUpSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'], // Error shows on confirmPassword field
+  });
+```
+
+### Conditional Validation
+
+```tsx
+const schema = z
+  .object({
+    accountType: z.enum(['personal', 'business']),
+    companyName: z.string().optional(),
+    taxId: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.accountType === 'business') {
+        return !!data.companyName && !!data.taxId;
+      }
+      return true;
+    },
+    {
+      message: 'Company name and Tax ID required for business accounts',
+      path: ['companyName'],
+    }
+  );
+```
+
+### Transform Data
+
+```tsx
+const schema = z.object({
+  // Trim and lowercase email
+  email: z
+    .string()
+    .email()
+    .transform((val) => val.toLowerCase().trim()),
+
+  // Parse string to number
+  age: z.string().transform((val) => parseInt(val, 10)),
+
+  // Format phone number
+  phone: z
+    .string()
+    .transform((val) => val.replace(/\D/g, ''))
+    .refine((val) => val.length === 10, 'Must be 10 digits'),
+});
+```
+
+### Arrays
+
+```tsx
+const schema = z.object({
+  // Array of strings
+  tags: z.array(z.string()).min(1, 'Add at least one tag'),
+
+  // Array of objects
+  addresses: z
+    .array(
+      z.object({
+        street: z.string().min(1),
+        city: z.string().min(1),
+        zip: z.string().regex(/^\d{5}$/),
+      })
+    )
+    .min(1, 'Add at least one address'),
+});
+```
+
+### Union Types
+
+```tsx
+// Either email or phone required
+const contactSchema = z.union([
+  z.object({
+    contactMethod: z.literal('email'),
+    email: z.string().email(),
+  }),
+  z.object({
+    contactMethod: z.literal('phone'),
+    phone: z.string().min(10),
+  }),
+]);
+```
+
+## Reusable Schemas
+
+```tsx
+// schemas/user.ts
+export const emailSchema = z
+  .string()
+  .email('Invalid email address')
+  .min(1, 'Email is required');
+
+export const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Must contain uppercase letter')
+  .regex(/[a-z]/, 'Must contain lowercase letter')
+  .regex(/[0-9]/, 'Must contain number');
+
+export const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const signUpSchema = z
+  .object({
+    email: emailSchema,
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
+// Type exports
+export type LoginForm = z.infer<typeof loginSchema>;
+export type SignUpForm = z.infer<typeof signUpSchema>;
+```
+
+## Custom Error Messages
+
+```tsx
+const schema = z.object({
+  email: z.string({
+    required_error: 'Email is required',
+    invalid_type_error: 'Email must be a string',
+  }).email('Invalid email format'),
+});
+
+// Global error map
+z.setErrorMap((issue, ctx) => {
+  if (issue.code === 'too_small') {
+    return { message: `Must be at least ${issue.minimum} characters` };
+  }
+  return { message: ctx.defaultError };
+});
+```
+
+## Async Validation
+
+```tsx
+const schema = z.object({
+  username: z
+    .string()
+    .min(3)
+    .refine(
+      async (username) => {
+        const exists = await checkUsernameExists(username);
+        return !exists;
+      },
+      { message: 'Username already taken' }
+    ),
+});
+
+// Use with mode: 'onBlur' for better UX
+const form = useForm<FormData>({
+  resolver: zodResolver(schema),
+  mode: 'onBlur', // Validate on blur
+});
+```
+
+## Complete Example
+
+```tsx
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const contactSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+  subject: z.enum(['general', 'support', 'sales'], {
+    errorMap: () => ({ message: 'Select a subject' }),
+  }),
+  message: z
+    .string()
+    .min(10, 'Message must be at least 10 characters')
+    .max(1000, 'Message too long'),
+  priority: z.coerce.number().min(1).max(5).optional(),
+});
+
+type ContactForm = z.infer<typeof contactSchema>;
+
+function ContactForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<ContactForm>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      subject: 'general',
+    },
+  });
+
+  const onSubmit = async (data: ContactForm) => {
+    await sendContactForm(data);
+    reset();
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div>
+        <input {...register('name')} placeholder="Name" />
+        {errors.name && <span className="error">{errors.name.message}</span>}
+      </div>
+
+      <div>
+        <input {...register('email')} placeholder="Email" />
+        {errors.email && <span className="error">{errors.email.message}</span>}
+      </div>
+
+      <div>
+        <select {...register('subject')}>
+          <option value="">Select subject...</option>
+          <option value="general">General Inquiry</option>
+          <option value="support">Support</option>
+          <option value="sales">Sales</option>
+        </select>
+        {errors.subject && <span className="error">{errors.subject.message}</span>}
+      </div>
+
+      <div>
+        <textarea {...register('message')} placeholder="Message" rows={5} />
+        {errors.message && <span className="error">{errors.message.message}</span>}
+      </div>
+
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'Sending...' : 'Send Message'}
+      </button>
+    </form>
+  );
+}
+```
+
+## Best Practices
+
+1. **Define schemas separately** - Keep schemas in dedicated files
+2. **Infer types from schemas** - Use `z.infer<typeof schema>`
+3. **Use `.coerce` for form inputs** - Forms return strings
+4. **Validate on blur** - Better UX than validating on every keystroke
+5. **Reuse common schemas** - Create shared email, password schemas

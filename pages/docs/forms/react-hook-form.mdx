@@ -1,0 +1,317 @@
+---
+description: Build performant forms with React Hook Form - the standard for React form handling.
+---
+
+# React Hook Form
+
+React Hook Form is the go-to library for forms in React. It's performant, has minimal re-renders, and integrates well with validation libraries.
+
+## Why React Hook Form?
+
+| Feature | React Hook Form | Formik | Native |
+|---------|----------------|--------|--------|
+| Re-renders | Minimal | Every change | Every change |
+| Bundle size | ~9kb | ~13kb | 0kb |
+| Validation | Built-in + Zod | Yup | Manual |
+| TypeScript | Excellent | Good | Manual |
+
+## Installation
+
+```bash
+npm install react-hook-form
+```
+
+## Basic Usage
+
+```tsx
+import { useForm } from 'react-hook-form';
+
+interface FormData {
+  email: string;
+  password: string;
+}
+
+function LoginForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>();
+
+  const onSubmit = async (data: FormData) => {
+    await loginUser(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div>
+        <label htmlFor="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          {...register('email', { required: 'Email is required' })}
+        />
+        {errors.email && <span>{errors.email.message}</span>}
+      </div>
+
+      <div>
+        <label htmlFor="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          {...register('password', { required: 'Password is required' })}
+        />
+        {errors.password && <span>{errors.password.message}</span>}
+      </div>
+
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'Logging in...' : 'Login'}
+      </button>
+    </form>
+  );
+}
+```
+
+## Register Options
+
+```tsx
+// Required field
+{...register('name', { required: 'Name is required' })}
+
+// Min/max length
+{...register('username', {
+  minLength: { value: 3, message: 'Min 3 characters' },
+  maxLength: { value: 20, message: 'Max 20 characters' },
+})}
+
+// Pattern matching
+{...register('email', {
+  pattern: {
+    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+    message: 'Invalid email address',
+  },
+})}
+
+// Custom validation
+{...register('username', {
+  validate: (value) =>
+    !value.includes(' ') || 'Username cannot contain spaces',
+})}
+
+// Async validation
+{...register('username', {
+  validate: async (value) => {
+    const exists = await checkUsernameExists(value);
+    return !exists || 'Username already taken';
+  },
+})}
+```
+
+## Form State
+
+```tsx
+const {
+  formState: {
+    errors,        // Validation errors
+    isSubmitting,  // Form is being submitted
+    isValid,       // All fields are valid
+    isDirty,       // Any field has been modified
+    dirtyFields,   // Which fields have been modified
+    touchedFields, // Which fields have been touched
+  },
+} = useForm<FormData>();
+```
+
+## Default Values
+
+```tsx
+// Static defaults
+const { register } = useForm<FormData>({
+  defaultValues: {
+    email: '',
+    role: 'user',
+  },
+});
+
+// Async defaults (for edit forms)
+const { register } = useForm<FormData>({
+  defaultValues: async () => {
+    const user = await fetchUser(userId);
+    return {
+      email: user.email,
+      name: user.name,
+    };
+  },
+});
+```
+
+## Reset Form
+
+```tsx
+const { reset } = useForm<FormData>();
+
+// Reset to default values
+reset();
+
+// Reset to specific values
+reset({
+  email: 'new@example.com',
+  name: 'New Name',
+});
+
+// Reset after successful submit
+const onSubmit = async (data: FormData) => {
+  await saveData(data);
+  reset(); // Clear form
+};
+```
+
+## Watch Values
+
+```tsx
+const { watch } = useForm<FormData>();
+
+// Watch single field
+const email = watch('email');
+
+// Watch multiple fields
+const [email, password] = watch(['email', 'password']);
+
+// Watch all fields
+const allValues = watch();
+
+// Conditional rendering based on value
+function Form() {
+  const accountType = watch('accountType');
+
+  return (
+    <form>
+      <select {...register('accountType')}>
+        <option value="personal">Personal</option>
+        <option value="business">Business</option>
+      </select>
+
+      {accountType === 'business' && (
+        <input {...register('companyName')} placeholder="Company Name" />
+      )}
+    </form>
+  );
+}
+```
+
+## Set Values Programmatically
+
+```tsx
+const { setValue, getValues } = useForm<FormData>();
+
+// Set single value
+setValue('email', 'user@example.com');
+
+// Set with validation
+setValue('email', 'user@example.com', {
+  shouldValidate: true,
+  shouldDirty: true,
+});
+
+// Get current values
+const email = getValues('email');
+const allValues = getValues();
+```
+
+## Error Handling
+
+```tsx
+const { setError, clearErrors } = useForm<FormData>();
+
+// Set error manually (e.g., from API response)
+const onSubmit = async (data: FormData) => {
+  try {
+    await saveData(data);
+  } catch (error) {
+    if (error.field === 'email') {
+      setError('email', {
+        type: 'server',
+        message: 'Email already exists',
+      });
+    } else {
+      setError('root', {
+        type: 'server',
+        message: 'Something went wrong',
+      });
+    }
+  }
+};
+
+// Display root error
+{errors.root && <div className="error">{errors.root.message}</div>}
+
+// Clear specific error
+clearErrors('email');
+
+// Clear all errors
+clearErrors();
+```
+
+## Form with Loading State
+
+```tsx
+function EditUserForm({ userId }: { userId: string }) {
+  const { register, handleSubmit, reset, formState } = useForm<FormData>();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadUser() {
+      const user = await fetchUser(userId);
+      reset(user); // Populate form with fetched data
+      setIsLoading(false);
+    }
+    loadUser();
+  }, [userId, reset]);
+
+  if (isLoading) return <FormSkeleton />;
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {/* Form fields */}
+    </form>
+  );
+}
+```
+
+## TypeScript Integration
+
+```tsx
+// Define your form types
+interface SignUpForm {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  acceptTerms: boolean;
+}
+
+// Use with useForm
+const {
+  register,
+  handleSubmit,
+  formState: { errors },
+} = useForm<SignUpForm>({
+  defaultValues: {
+    email: '',
+    password: '',
+    confirmPassword: '',
+    acceptTerms: false,
+  },
+});
+
+// Errors are fully typed
+errors.email?.message; // string | undefined
+errors.acceptTerms?.message; // string | undefined
+```
+
+## Best Practices
+
+1. **Always use TypeScript** - Define form interfaces for type safety
+2. **Set default values** - Prevents undefined values
+3. **Use mode wisely** - `onBlur` for better UX, `onChange` for real-time validation
+4. **Handle loading states** - Show skeletons while loading async defaults
+5. **Use Zod for validation** - See the Zod Validation page

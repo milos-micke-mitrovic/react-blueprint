@@ -1,0 +1,333 @@
+---
+description: Set up internationalization (i18n) in React and Next.js applications.
+---
+
+# i18n Setup & Configuration
+
+Add multi-language support to your React application.
+
+## Library Comparison
+
+| Library | Best For | Bundle Size |
+|---------|----------|-------------|
+| next-intl | Next.js App Router | ~15kb |
+| react-i18next | Any React app | ~20kb |
+| react-intl | Large apps, ICU format | ~25kb |
+| next-translate | Next.js Pages Router | ~3kb |
+
+## next-intl (Recommended for Next.js)
+
+```bash
+npm install next-intl
+```
+
+### Project Structure
+
+```
+├── messages/
+│   ├── en.json
+│   ├── es.json
+│   └── fr.json
+├── i18n/
+│   ├── request.ts
+│   └── routing.ts
+├── app/
+│   └── [locale]/
+│       ├── layout.tsx
+│       └── page.tsx
+└── middleware.ts
+```
+
+### Configuration
+
+```tsx
+// i18n/routing.ts
+import { defineRouting } from 'next-intl/routing';
+
+export const routing = defineRouting({
+  locales: ['en', 'es', 'fr'],
+  defaultLocale: 'en',
+});
+```
+
+```tsx
+// i18n/request.ts
+import { getRequestConfig } from 'next-intl/server';
+import { routing } from './routing';
+
+export default getRequestConfig(async ({ requestLocale }) => {
+  let locale = await requestLocale;
+
+  if (!locale || !routing.locales.includes(locale as any)) {
+    locale = routing.defaultLocale;
+  }
+
+  return {
+    locale,
+    messages: (await import(`../messages/${locale}.json`)).default,
+  };
+});
+```
+
+```tsx
+// middleware.ts
+import createMiddleware from 'next-intl/middleware';
+import { routing } from './i18n/routing';
+
+export default createMiddleware(routing);
+
+export const config = {
+  matcher: ['/', '/(en|es|fr)/:path*'],
+};
+```
+
+### Layout Setup
+
+```tsx
+// app/[locale]/layout.tsx
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import { routing } from '@/i18n/routing';
+
+export default async function LocaleLayout({
+  children,
+  params: { locale },
+}: {
+  children: React.ReactNode;
+  params: { locale: string };
+}) {
+  if (!routing.locales.includes(locale as any)) {
+    notFound();
+  }
+
+  const messages = await getMessages();
+
+  return (
+    <html lang={locale}>
+      <body>
+        <NextIntlClientProvider messages={messages}>
+          {children}
+        </NextIntlClientProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+### Translation Files
+
+```json
+// messages/en.json
+{
+  "home": {
+    "title": "Welcome",
+    "description": "Build amazing apps"
+  },
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}
+```
+
+```json
+// messages/es.json
+{
+  "home": {
+    "title": "Bienvenido",
+    "description": "Crea aplicaciones increíbles"
+  },
+  "nav": {
+    "home": "Inicio",
+    "about": "Acerca de",
+    "contact": "Contacto"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "save": "Guardar",
+    "cancel": "Cancelar"
+  }
+}
+```
+
+### Using Translations
+
+```tsx
+// Server Component
+import { useTranslations } from 'next-intl';
+
+export default function HomePage() {
+  const t = useTranslations('home');
+
+  return (
+    <div>
+      <h1>{t('title')}</h1>
+      <p>{t('description')}</p>
+    </div>
+  );
+}
+```
+
+```tsx
+// Client Component
+'use client';
+
+import { useTranslations } from 'next-intl';
+
+export function ContactForm() {
+  const t = useTranslations('common');
+
+  return (
+    <form>
+      {/* ... */}
+      <button type="submit">{t('save')}</button>
+      <button type="button">{t('cancel')}</button>
+    </form>
+  );
+}
+```
+
+## react-i18next (Any React App)
+
+```bash
+npm install react-i18next i18next
+```
+
+### Setup
+
+```tsx
+// i18n/index.ts
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import en from './locales/en.json';
+import es from './locales/es.json';
+
+i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: en },
+    es: { translation: es },
+  },
+  lng: 'en',
+  fallbackLng: 'en',
+  interpolation: {
+    escapeValue: false,
+  },
+});
+
+export default i18n;
+```
+
+```tsx
+// main.tsx
+import './i18n';
+import { App } from './App';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+```
+
+### Using Translations
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t, i18n } = useTranslation();
+
+  return (
+    <div>
+      <h1>{t('home.title')}</h1>
+      <button onClick={() => i18n.changeLanguage('es')}>
+        Español
+      </button>
+    </div>
+  );
+}
+```
+
+## Language Switcher
+
+```tsx
+// components/language-switcher.tsx
+'use client';
+
+import { useLocale } from 'next-intl';
+import { useRouter, usePathname } from 'next/navigation';
+
+const languages = [
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+];
+
+export function LanguageSwitcher() {
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleChange = (newLocale: string) => {
+    // Replace current locale in path
+    const newPath = pathname.replace(`/${locale}`, `/${newLocale}`);
+    router.push(newPath);
+  };
+
+  return (
+    <select
+      value={locale}
+      onChange={(e) => handleChange(e.target.value)}
+      className="border rounded px-2 py-1"
+    >
+      {languages.map((lang) => (
+        <option key={lang.code} value={lang.code}>
+          {lang.flag} {lang.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+```
+
+## next.config.mjs Setup
+
+```tsx
+// next.config.mjs
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Your config
+};
+
+export default withNextIntl(nextConfig);
+```
+
+## TypeScript Support
+
+```tsx
+// global.d.ts
+type Messages = typeof import('./messages/en.json');
+
+declare interface IntlMessages extends Messages {}
+```
+
+## Best Practices
+
+1. **Use namespaces** - Organize translations by feature/page
+2. **Default locale fallback** - Always have a fallback language
+3. **Type safety** - Generate types from translation files
+4. **Lazy loading** - Load translations on demand for large apps
+5. **SEO** - Use proper `lang` attributes and hreflang tags

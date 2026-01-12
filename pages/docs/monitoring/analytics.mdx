@@ -1,0 +1,404 @@
+---
+description: Add analytics to track user behavior and measure product success.
+---
+
+# Analytics
+
+Track user behavior to make data-driven decisions.
+
+## Analytics Tools
+
+| Tool | Best For | Privacy |
+|------|----------|---------|
+| Google Analytics 4 | Free, comprehensive | Cookie-based |
+| Plausible | Privacy-focused | No cookies |
+| PostHog | Product analytics, open source | Self-hostable |
+| Mixpanel | Event tracking, funnels | Enterprise |
+| Vercel Analytics | Next.js, Web Vitals | Privacy-friendly |
+
+## Vercel Analytics (Next.js)
+
+```bash
+npm install @vercel/analytics @vercel/speed-insights
+```
+
+```tsx
+// app/layout.tsx
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <Analytics />
+        <SpeedInsights />
+      </body>
+    </html>
+  );
+}
+```
+
+### Custom Events
+
+```tsx
+import { track } from '@vercel/analytics';
+
+// Track custom event
+track('button_clicked', {
+  button_name: 'sign_up',
+  location: 'header',
+});
+
+// Track form submission
+track('form_submitted', {
+  form_name: 'contact',
+  success: true,
+});
+```
+
+## Google Analytics 4
+
+### Setup
+
+```tsx
+// components/google-analytics.tsx
+'use client';
+
+import Script from 'next/script';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+
+export function GoogleAnalytics() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (pathname && GA_ID) {
+      window.gtag('config', GA_ID, {
+        page_path: pathname + (searchParams?.toString() || ''),
+      });
+    }
+  }, [pathname, searchParams]);
+
+  if (!GA_ID) return null;
+
+  return (
+    <>
+      <Script
+        strategy="afterInteractive"
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+      />
+      <Script
+        id="google-analytics"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}');
+          `,
+        }}
+      />
+    </>
+  );
+}
+```
+
+### Custom Events
+
+```tsx
+// lib/analytics.ts
+export function trackEvent(
+  action: string,
+  category: string,
+  label?: string,
+  value?: number
+) {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('event', action, {
+      event_category: category,
+      event_label: label,
+      value: value,
+    });
+  }
+}
+
+// Usage
+trackEvent('click', 'Button', 'Sign Up CTA');
+trackEvent('purchase', 'Ecommerce', 'Premium Plan', 99);
+```
+
+### E-commerce Tracking
+
+```tsx
+// Track purchase
+window.gtag('event', 'purchase', {
+  transaction_id: 'T_12345',
+  value: 99.99,
+  currency: 'USD',
+  items: [
+    {
+      item_id: 'SKU_123',
+      item_name: 'Premium Plan',
+      price: 99.99,
+      quantity: 1,
+    },
+  ],
+});
+
+// Track add to cart
+window.gtag('event', 'add_to_cart', {
+  currency: 'USD',
+  value: 29.99,
+  items: [
+    {
+      item_id: 'SKU_456',
+      item_name: 'Basic Plan',
+      price: 29.99,
+    },
+  ],
+});
+```
+
+## Plausible (Privacy-Focused)
+
+```tsx
+// components/plausible.tsx
+import Script from 'next/script';
+
+export function Plausible() {
+  return (
+    <Script
+      defer
+      data-domain="yourdomain.com"
+      src="https://plausible.io/js/script.js"
+    />
+  );
+}
+```
+
+### Custom Events
+
+```tsx
+// Track event
+window.plausible('Signup', { props: { plan: 'premium' } });
+
+// Track pageview
+window.plausible('pageview');
+```
+
+## PostHog
+
+```bash
+npm install posthog-js
+```
+
+```tsx
+// lib/posthog.ts
+import posthog from 'posthog-js';
+
+export function initPostHog() {
+  if (typeof window !== 'undefined') {
+    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
+      capture_pageview: false, // Manual pageviews
+    });
+  }
+}
+
+// components/posthog-provider.tsx
+'use client';
+
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import posthog from 'posthog-js';
+import { PostHogProvider as PHProvider } from 'posthog-js/react';
+
+export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (pathname) {
+      let url = window.origin + pathname;
+      if (searchParams?.toString()) {
+        url += `?${searchParams.toString()}`;
+      }
+      posthog.capture('$pageview', { $current_url: url });
+    }
+  }, [pathname, searchParams]);
+
+  return <PHProvider client={posthog}>{children}</PHProvider>;
+}
+```
+
+### Feature Flags
+
+```tsx
+import { useFeatureFlagEnabled } from 'posthog-js/react';
+
+function NewFeature() {
+  const showNewFeature = useFeatureFlagEnabled('new-checkout-flow');
+
+  if (!showNewFeature) {
+    return <OldCheckout />;
+  }
+
+  return <NewCheckout />;
+}
+```
+
+## Analytics Hook
+
+```tsx
+// hooks/use-analytics.ts
+import { useCallback } from 'react';
+
+interface EventProps {
+  [key: string]: string | number | boolean;
+}
+
+export function useAnalytics() {
+  const trackEvent = useCallback((name: string, props?: EventProps) => {
+    // Google Analytics
+    if (window.gtag) {
+      window.gtag('event', name, props);
+    }
+
+    // PostHog
+    if (window.posthog) {
+      window.posthog.capture(name, props);
+    }
+
+    // Plausible
+    if (window.plausible) {
+      window.plausible(name, { props });
+    }
+
+    // Vercel Analytics
+    if (typeof track !== 'undefined') {
+      track(name, props);
+    }
+  }, []);
+
+  const identifyUser = useCallback((userId: string, traits?: EventProps) => {
+    if (window.posthog) {
+      window.posthog.identify(userId, traits);
+    }
+  }, []);
+
+  return { trackEvent, identifyUser };
+}
+
+// Usage
+function SignupButton() {
+  const { trackEvent } = useAnalytics();
+
+  const handleClick = () => {
+    trackEvent('signup_clicked', { location: 'header' });
+  };
+
+  return <button onClick={handleClick}>Sign Up</button>;
+}
+```
+
+## Event Naming Conventions
+
+```tsx
+// Consistent naming pattern
+const events = {
+  // User actions
+  'button_clicked': { button_name: string, location: string },
+  'form_submitted': { form_name: string, success: boolean },
+  'link_clicked': { destination: string, label: string },
+
+  // Page views
+  'page_viewed': { page_name: string, referrer: string },
+
+  // E-commerce
+  'product_viewed': { product_id: string, category: string },
+  'add_to_cart': { product_id: string, quantity: number },
+  'checkout_started': { cart_value: number },
+  'purchase_completed': { order_id: string, value: number },
+
+  // User lifecycle
+  'signup_started': { method: string },
+  'signup_completed': { method: string },
+  'login': { method: string },
+  'logout': {},
+};
+```
+
+## Cookie Consent
+
+```tsx
+// components/cookie-consent.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+
+export function CookieConsent() {
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    const consent = localStorage.getItem('cookie-consent');
+    if (!consent) {
+      setShowBanner(true);
+    }
+  }, []);
+
+  const acceptAll = () => {
+    localStorage.setItem('cookie-consent', 'all');
+    setShowBanner(false);
+    // Enable analytics
+    window.gtag?.('consent', 'update', {
+      analytics_storage: 'granted',
+    });
+  };
+
+  const acceptEssential = () => {
+    localStorage.setItem('cookie-consent', 'essential');
+    setShowBanner(false);
+  };
+
+  if (!showBanner) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg">
+      <p>We use cookies to improve your experience.</p>
+      <div className="flex gap-2 mt-2">
+        <button onClick={acceptAll}>Accept All</button>
+        <button onClick={acceptEssential}>Essential Only</button>
+      </div>
+    </div>
+  );
+}
+```
+
+## Debug Mode
+
+```tsx
+// Only log in development
+function debugTrack(event: string, props?: object) {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📊 Analytics Event:', event, props);
+  }
+
+  // Actual tracking
+  trackEvent(event, props);
+}
+```
+
+## Best Practices
+
+1. **Respect privacy** - Get consent, anonymize data
+2. **Be consistent** - Use naming conventions
+3. **Track what matters** - Focus on key metrics
+4. **Don't over-track** - Too many events = noise
+5. **Test tracking** - Verify events fire correctly
+6. **Document events** - Keep a tracking plan

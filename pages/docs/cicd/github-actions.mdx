@@ -1,0 +1,378 @@
+---
+description: Set up GitHub Actions for automated testing, linting, and deployment.
+---
+
+# GitHub Actions
+
+Automate your CI/CD pipeline with GitHub Actions.
+
+## Basic Workflow Structure
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+```
+
+## pnpm Setup
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm tsc --noEmit
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+```
+
+## Caching Dependencies
+
+### npm
+
+```yaml
+- name: Setup Node.js
+  uses: actions/setup-node@v4
+  with:
+    node-version: '20'
+    cache: 'npm'
+```
+
+### pnpm
+
+```yaml
+- name: Setup pnpm
+  uses: pnpm/action-setup@v3
+  with:
+    version: 9
+
+- name: Setup Node.js
+  uses: actions/setup-node@v4
+  with:
+    node-version: '20'
+    cache: 'pnpm'
+```
+
+### Custom Cache
+
+```yaml
+- name: Cache node_modules
+  uses: actions/cache@v4
+  with:
+    path: node_modules
+    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+    restore-keys: |
+      ${{ runner.os }}-node-
+```
+
+### Next.js Build Cache
+
+```yaml
+- name: Cache Next.js build
+  uses: actions/cache@v4
+  with:
+    path: |
+      ~/.npm
+      ${{ github.workspace }}/.next/cache
+    key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+    restore-keys: |
+      ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+```
+
+## Matrix Testing
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm test
+```
+
+## Environment Variables
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install and test
+        run: |
+          npm ci
+          npm test
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+```
+
+## Secrets Management
+
+```yaml
+# Access secrets
+env:
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+# Access GitHub token (automatic)
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Set secrets in: Repository Settings → Secrets and variables → Actions
+
+## Conditional Jobs
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # ... build steps
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only deploy on main branch
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Deploy
+        run: echo "Deploying..."
+```
+
+## Job Dependencies
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm test
+
+  build:
+    needs: [lint, test]  # Runs after lint and test pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run build
+```
+
+## Artifacts
+
+### Upload Build
+
+```yaml
+- name: Build
+  run: npm run build
+
+- name: Upload build artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: build
+    path: .next/
+    retention-days: 7
+```
+
+### Download in Another Job
+
+```yaml
+deploy:
+  needs: build
+  runs-on: ubuntu-latest
+  steps:
+    - name: Download build
+      uses: actions/download-artifact@v4
+      with:
+        name: build
+        path: .next/
+
+    - name: Deploy
+      run: ./deploy.sh
+```
+
+## Pull Request Comments
+
+```yaml
+- name: Comment on PR
+  uses: actions/github-script@v7
+  if: github.event_name == 'pull_request'
+  with:
+    script: |
+      github.rest.issues.createComment({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        body: '✅ Build passed! Preview: ${{ steps.deploy.outputs.url }}'
+      })
+```
+
+## Triggering Other Workflows
+
+```yaml
+# Use workflow_dispatch for manual triggers
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+```
+
+## Reusable Workflows
+
+```yaml
+# .github/workflows/reusable-build.yml
+name: Reusable Build
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: '20'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+      - run: npm ci
+      - run: npm run build
+```
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  call-build:
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      node-version: '20'
+```
+
+## Status Badges
+
+Add to your README:
+
+```markdown
+![CI](https://github.com/username/repo/actions/workflows/ci.yml/badge.svg)
+```
+
+## Best Practices
+
+1. **Use specific versions** - Pin action versions (`@v4` not `@latest`)
+2. **Cache dependencies** - Speed up builds significantly
+3. **Fail fast** - Don't run deploy if tests fail
+4. **Use secrets** - Never hardcode credentials
+5. **Matrix test** - Test multiple Node versions
+6. **Keep workflows DRY** - Use reusable workflows

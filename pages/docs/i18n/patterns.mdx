@@ -1,0 +1,404 @@
+---
+description: Common internationalization patterns and solutions for React applications.
+---
+
+# i18n Patterns
+
+Practical patterns for implementing internationalization in React.
+
+## SEO for Multiple Languages
+
+### Metadata per Locale
+
+```tsx
+// app/[locale]/page.tsx
+import { getTranslations } from 'next-intl/server';
+import { Metadata } from 'next';
+
+export async function generateMetadata({ params: { locale } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: 'home' });
+
+  return {
+    title: t('meta.title'),
+    description: t('meta.description'),
+    alternates: {
+      canonical: `https://example.com/${locale}`,
+      languages: {
+        'en': 'https://example.com/en',
+        'es': 'https://example.com/es',
+        'fr': 'https://example.com/fr',
+      },
+    },
+  };
+}
+```
+
+### Hreflang Tags
+
+```tsx
+// app/[locale]/layout.tsx
+export default function Layout({ children, params: { locale } }) {
+  const locales = ['en', 'es', 'fr'];
+
+  return (
+    <html lang={locale}>
+      <head>
+        {locales.map((loc) => (
+          <link
+            key={loc}
+            rel="alternate"
+            hrefLang={loc}
+            href={`https://example.com/${loc}`}
+          />
+        ))}
+        <link
+          rel="alternate"
+          hrefLang="x-default"
+          href="https://example.com/en"
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+## Locale Detection
+
+### Browser Language
+
+```tsx
+// utils/locale.ts
+export function getBrowserLocale(supportedLocales: string[]): string {
+  if (typeof navigator === 'undefined') return 'en';
+
+  const browserLang = navigator.language.split('-')[0];
+
+  return supportedLocales.includes(browserLang) ? browserLang : 'en';
+}
+```
+
+### With Cookie Persistence
+
+```tsx
+// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+const SUPPORTED_LOCALES = ['en', 'es', 'fr'];
+const DEFAULT_LOCALE = 'en';
+
+export function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // Check if locale is in path
+  const pathnameLocale = SUPPORTED_LOCALES.find(
+    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+  );
+
+  if (pathnameLocale) return;
+
+  // Check cookie
+  const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
+  if (cookieLocale && SUPPORTED_LOCALES.includes(cookieLocale)) {
+    return NextResponse.redirect(
+      new URL(`/${cookieLocale}${pathname}`, request.url)
+    );
+  }
+
+  // Check Accept-Language header
+  const acceptLanguage = request.headers.get('accept-language');
+  const browserLocale = acceptLanguage?.split(',')[0].split('-')[0];
+
+  const locale = SUPPORTED_LOCALES.includes(browserLocale || '')
+    ? browserLocale
+    : DEFAULT_LOCALE;
+
+  const response = NextResponse.redirect(
+    new URL(`/${locale}${pathname}`, request.url)
+  );
+
+  // Set cookie for future visits
+  response.cookies.set('NEXT_LOCALE', locale!, { maxAge: 60 * 60 * 24 * 365 });
+
+  return response;
+}
+```
+
+## Form Validation Messages
+
+```json
+// messages/en.json
+{
+  "validation": {
+    "required": "{field} is required",
+    "email": "Please enter a valid email address",
+    "minLength": "{field} must be at least {min} characters",
+    "maxLength": "{field} must be at most {max} characters",
+    "passwordMatch": "Passwords do not match"
+  }
+}
+```
+
+```tsx
+// hooks/use-form-translations.ts
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
+
+export function useFormTranslations() {
+  const t = useTranslations('validation');
+
+  return {
+    required: (field: string) => t('required', { field }),
+    email: () => t('email'),
+    minLength: (field: string, min: number) => t('minLength', { field, min }),
+    maxLength: (field: string, max: number) => t('maxLength', { field, max }),
+  };
+}
+
+// Usage in schema
+function useLoginSchema() {
+  const v = useFormTranslations();
+
+  return z.object({
+    email: z.string().min(1, v.required('Email')).email(v.email()),
+    password: z.string().min(8, v.minLength('Password', 8)),
+  });
+}
+```
+
+## Dynamic Content
+
+### Server-Fetched Translations
+
+```tsx
+// For content that comes from a CMS/database
+interface Post {
+  id: string;
+  translations: {
+    [locale: string]: {
+      title: string;
+      content: string;
+    };
+  };
+}
+
+function PostPage({ post, locale }: { post: Post; locale: string }) {
+  const translation = post.translations[locale] || post.translations['en'];
+
+  return (
+    <article>
+      <h1>{translation.title}</h1>
+      <div>{translation.content}</div>
+    </article>
+  );
+}
+```
+
+### User-Generated Content
+
+```tsx
+// Store content in user's language, display in viewer's language
+interface Comment {
+  id: string;
+  content: string;
+  originalLocale: string;
+  translations?: { [locale: string]: string };
+}
+
+function Comment({ comment, viewerLocale }: { comment: Comment; viewerLocale: string }) {
+  const content = comment.translations?.[viewerLocale] || comment.content;
+  const isTranslated = comment.originalLocale !== viewerLocale;
+
+  return (
+    <div>
+      <p>{content}</p>
+      {isTranslated && (
+        <span className="text-sm text-gray-500">
+          Translated from {comment.originalLocale}
+        </span>
+      )}
+    </div>
+  );
+}
+```
+
+## RTL (Right-to-Left) Support
+
+```tsx
+// app/[locale]/layout.tsx
+const rtlLocales = ['ar', 'he', 'fa'];
+
+export default function Layout({ children, params: { locale } }) {
+  const dir = rtlLocales.includes(locale) ? 'rtl' : 'ltr';
+
+  return (
+    <html lang={locale} dir={dir}>
+      <body className={dir === 'rtl' ? 'font-arabic' : ''}>
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+### RTL-Aware Styling
+
+```css
+/* Use logical properties */
+.sidebar {
+  /* Instead of margin-left */
+  margin-inline-start: 1rem;
+
+  /* Instead of padding-right */
+  padding-inline-end: 1rem;
+
+  /* Instead of border-left */
+  border-inline-start: 1px solid #ccc;
+}
+
+/* RTL-specific overrides */
+[dir='rtl'] .icon-arrow {
+  transform: scaleX(-1);
+}
+```
+
+## Currency and Regional Formats
+
+```tsx
+// hooks/use-locale-formats.ts
+import { useLocale, useFormatter } from 'next-intl';
+
+const localeCurrencies: Record<string, string> = {
+  en: 'USD',
+  es: 'EUR',
+  'en-GB': 'GBP',
+  ja: 'JPY',
+};
+
+export function useLocaleFormats() {
+  const locale = useLocale();
+  const format = useFormatter();
+
+  const formatPrice = (amount: number, currency?: string) => {
+    return format.number(amount, {
+      style: 'currency',
+      currency: currency || localeCurrencies[locale] || 'USD',
+    });
+  };
+
+  const formatDate = (date: Date, style: 'short' | 'long' = 'long') => {
+    return format.dateTime(date, { dateStyle: style });
+  };
+
+  return { formatPrice, formatDate };
+}
+
+// Usage
+function ProductPrice({ price }: { price: number }) {
+  const { formatPrice } = useLocaleFormats();
+
+  return <span>{formatPrice(price)}</span>;
+}
+```
+
+## Namespace Splitting for Performance
+
+```tsx
+// Load only needed translations
+// app/[locale]/dashboard/page.tsx
+import { unstable_setRequestLocale } from 'next-intl/server';
+
+export default async function DashboardPage({ params: { locale } }) {
+  unstable_setRequestLocale(locale);
+
+  // Only load dashboard translations
+  const messages = (await import(`@/messages/${locale}/dashboard.json`)).default;
+
+  return (
+    <NextIntlClientProvider messages={{ dashboard: messages }}>
+      <Dashboard />
+    </NextIntlClientProvider>
+  );
+}
+```
+
+## Testing Translations
+
+```tsx
+// __tests__/i18n.test.tsx
+import { render, screen } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import HomePage from '@/app/[locale]/page';
+
+const messages = {
+  home: {
+    title: 'Welcome',
+    description: 'Test description',
+  },
+};
+
+function renderWithIntl(component: React.ReactNode, locale = 'en') {
+  return render(
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      {component}
+    </NextIntlClientProvider>
+  );
+}
+
+describe('HomePage', () => {
+  it('displays translated title', () => {
+    renderWithIntl(<HomePage />);
+    expect(screen.getByText('Welcome')).toBeInTheDocument();
+  });
+
+  it('displays Spanish translations', () => {
+    const esMessages = {
+      home: { title: 'Bienvenido', description: 'Descripción' },
+    };
+
+    render(
+      <NextIntlClientProvider locale="es" messages={esMessages}>
+        <HomePage />
+      </NextIntlClientProvider>
+    );
+
+    expect(screen.getByText('Bienvenido')).toBeInTheDocument();
+  });
+});
+```
+
+## URL Localization Strategies
+
+### Path-Based (Recommended)
+
+```
+https://example.com/en/about
+https://example.com/es/about
+https://example.com/fr/about
+```
+
+### Domain-Based
+
+```
+https://example.com (English)
+https://example.es (Spanish)
+https://example.fr (French)
+```
+
+### Query Parameter
+
+```
+https://example.com/about?lang=en
+https://example.com/about?lang=es
+```
+
+## Best Practices
+
+1. **Use path-based URLs** - Better for SEO and sharing
+2. **Persist preference** - Save user's language choice
+3. **Lazy load translations** - Don't load all languages upfront
+4. **Test text expansion** - Some languages need more space
+5. **Support RTL** - Use logical CSS properties
+6. **Translate metadata** - Don't forget page titles and descriptions
+7. **Handle missing translations** - Show fallback, log warning

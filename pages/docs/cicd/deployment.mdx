@@ -1,0 +1,389 @@
+---
+description: Deploy React and Next.js applications to various platforms.
+---
+
+# Deployment
+
+Deploy your React application to production.
+
+## Vercel (Recommended for Next.js)
+
+### Automatic Deployments
+
+1. Connect your GitHub repository to Vercel
+2. Vercel automatically deploys on push to `main`
+3. Preview deployments for every PR
+
+### GitHub Actions Deployment
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+```
+
+### Environment Variables
+
+```bash
+# Set via Vercel CLI
+vercel env add NEXT_PUBLIC_API_URL production
+vercel env add DATABASE_URL production
+
+# Or in vercel.json
+```
+
+```json
+// vercel.json
+{
+  "env": {
+    "NEXT_PUBLIC_APP_NAME": "MyApp"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "@api_url"
+    }
+  }
+}
+```
+
+## Netlify
+
+### netlify.toml
+
+```toml
+# netlify.toml
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirects
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.example.com/:splat"
+  status = 200
+
+# Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+```
+
+### GitHub Actions
+
+```yaml
+name: Deploy to Netlify
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: '.next'
+          production-deploy: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+```
+
+## AWS Amplify
+
+### amplify.yml
+
+```yaml
+# amplify.yml
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
+```
+
+## Docker
+
+### Dockerfile
+
+```dockerfile
+# Dockerfile
+FROM node:20-alpine AS base
+
+# Dependencies
+FROM base AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Build
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+# Production
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
+```
+
+### next.config.mjs for Docker
+
+```js
+// next.config.mjs
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'standalone',
+};
+
+export default nextConfig;
+```
+
+### docker-compose.yml
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/myapp
+      - NEXT_PUBLIC_API_URL=http://localhost:3000/api
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=myapp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+```
+
+## GitHub Pages (Static Sites)
+
+```yaml
+# .github/workflows/deploy-pages.yml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+```js
+// next.config.mjs (for static export)
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'export',
+  basePath: '/repo-name', // If deploying to username.github.io/repo-name
+  images: { unoptimized: true },
+};
+
+export default nextConfig;
+```
+
+## Environment-Based Deployments
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "url=https://myapp.com" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "url=https://staging.myapp.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy to ${{ steps.env.outputs.environment }}
+        run: |
+          echo "Deploying to ${{ steps.env.outputs.environment }}"
+          # Deploy command here
+        env:
+          DEPLOY_URL: ${{ steps.env.outputs.url }}
+```
+
+## Rollback Strategy
+
+```yaml
+# .github/workflows/rollback.yml
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to rollback to'
+        required: true
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Deploy previous version
+        run: |
+          echo "Rolling back to ${{ github.event.inputs.version }}"
+          # Deploy command here
+```
+
+## Health Checks
+
+```yaml
+- name: Health check
+  run: |
+    for i in {1..30}; do
+      if curl -s -o /dev/null -w "%{http_code}" ${{ env.DEPLOY_URL }}/api/health | grep -q "200"; then
+        echo "Health check passed"
+        exit 0
+      fi
+      echo "Waiting for deployment... ($i/30)"
+      sleep 10
+    done
+    echo "Health check failed"
+    exit 1
+```
+
+## Best Practices
+
+1. **Use preview deployments** - Test changes before merging
+2. **Environment separation** - Different configs for staging/production
+3. **Health checks** - Verify deployment success
+4. **Rollback plan** - Know how to revert quickly
+5. **Zero-downtime** - Use blue-green or rolling deployments
+6. **Monitor deployments** - Track errors after deploy
