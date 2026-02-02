@@ -83,7 +83,7 @@ const config: DocsThemeConfig = {
     const { frontMatter, title } = useConfig();
     useFixSearchScroll();
 
-    const url = `https://reactblueprint.dev${asPath}`;
+    const url = `https://react-blueprint.dev${asPath}`;
     const description = frontMatter.description || 'Modern React patterns and conventions for scalable applications';
     const ogTitle = title ? `${title} – ReactBlueprint` : 'ReactBlueprint';
 
@@ -117,7 +117,7 @@ const config: DocsThemeConfig = {
               '@type': 'WebSite',
               name: 'ReactBlueprint',
               alternateName: 'React Blueprint',
-              url: 'https://reactblueprint.dev',
+              url: 'https://react-blueprint.dev',
             }),
           }}
         />
@@ -127,14 +127,14 @@ const config: DocsThemeConfig = {
         <meta property="og:type" content="website" />
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={description} />
-        <meta property="og:image" content="https://reactblueprint.dev/logo.png" />
+        <meta property="og:image" content="https://react-blueprint.dev/logo.png" />
         <meta property="og:site_name" content="ReactBlueprint" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={ogTitle} />
         <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content="https://reactblueprint.dev/logo.png" />
+        <meta name="twitter:image" content="https://react-blueprint.dev/logo.png" />
 
         {/* Favicon - ico for Google, SVG for modern browsers, PNG fallback */}
         <link rel="icon" href="/favicon.ico" sizes="32x32" />

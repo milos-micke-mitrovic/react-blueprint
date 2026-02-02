@@ -1,6 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: 'https://reactblueprint.dev',
+  siteUrl: 'https://react-blueprint.dev',
   generateRobotsTxt: true,
   generateIndexSitemap: false,
   outDir: './public',
