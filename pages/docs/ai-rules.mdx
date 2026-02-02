@@ -1,0 +1,102 @@
+---
+title: AI Rules File — Feed ReactBlueprint to Your AI Coding Assistant
+description: Download a single rules file containing all ReactBlueprint conventions for Claude Code, Cursor, ChatGPT, GitHub Copilot, and other AI coding assistants.
+---
+
+# AI Rules File
+
+All of ReactBlueprint's conventions, patterns, and best practices — condensed into a single file you can feed to your AI coding assistant.
+
+<div className="mt-6 flex flex-col gap-4 sm:flex-row">
+  <a
+    href="/react-blueprint-rules.md"
+    download="react-blueprint-rules.md"
+    className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-6 py-3 text-base font-semibold text-white shadow-lg transition-all hover:bg-orange-600 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+  >{"Download react-blueprint-rules.md"}</a>
+</div>
+
+## What's Inside
+
+The file covers every section of ReactBlueprint in a condensed, directive format optimized for AI consumption:
+
+- **Tech Stack** — approved libraries and tools
+- **Project Structure** — folder organization and conventions
+- **Naming Conventions** — files, code, git branches, commits
+- **Components** — structure, patterns, composition rules
+- **Forms** — React Hook Form + Zod patterns
+- **State Management** — decision tree, Zustand, TanStack Query
+- **Data Fetching** — API services, error handling
+- **Authentication** — token storage, protected routes
+- **Styling** — Tailwind CSS conventions
+- **TypeScript** — strict config, patterns
+- **Testing** — coverage targets, what and how to test
+- **Error Handling** — boundaries, API errors
+- **Performance** — optimization rules, targets
+- **Linting & Formatting** — ESLint, Prettier config
+- **Git Workflow** — branches, commits, PRs
+- **Environment Variables** — naming, validation
+- **CI/CD** — pipeline configuration
+- **Internationalization** — i18n patterns
+- **Monitoring & Logging** — Sentry, structured logging
+- **Security** — checklist and anti-patterns
+- **Accessibility** — WCAG 2.1 AA requirements
+- **SEO** — meta tags, sitemaps, structured data
+- **Documentation** — JSDoc, READMEs
+
+## Setup by Tool
+
+### Claude Code
+
+{"Save as `CLAUDE.md` in your project root:"}
+
+```bash
+curl -o CLAUDE.md https://react-blueprint.dev/react-blueprint-rules.md
+```
+
+{"Claude Code automatically reads `CLAUDE.md` and follows the rules for every task."}
+
+### Cursor
+
+{"Save as `.cursorrules` in your project root:"}
+
+```bash
+curl -o .cursorrules https://react-blueprint.dev/react-blueprint-rules.md
+```
+
+{"Cursor reads `.cursorrules` on every prompt and applies the conventions to generated code."}
+
+### GitHub Copilot
+
+{"Save as `.github/copilot-instructions.md` in your project:"}
+
+```bash
+mkdir -p .github && curl -o .github/copilot-instructions.md https://react-blueprint.dev/react-blueprint-rules.md
+```
+
+{"Copilot uses this file as context when generating suggestions."}
+
+### ChatGPT / Other Assistants
+
+{"Open your assistant's custom instructions or system prompt, then paste the contents of the file."}
+
+1. [Open the rules file](/react-blueprint-rules.md) in your browser
+2. Select all and copy
+3. Paste into your assistant's custom instructions or system prompt
+
+### Windsurf
+
+{"Save as `.windsurfrules` in your project root:"}
+
+```bash
+curl -o .windsurfrules https://react-blueprint.dev/react-blueprint-rules.md
+```
+
+## Keeping Up to Date
+
+{"The rules file tracks the latest version of ReactBlueprint. Re-download it periodically to pick up new conventions:"}
+
+```bash
+curl -o CLAUDE.md https://react-blueprint.dev/react-blueprint-rules.md
+```
+
+{"Or bookmark this page and download again when the site updates."}
