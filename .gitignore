@@ -38,5 +38,9 @@ yarn-error.log*
 # Vercel
 .vercel
 
+# Generated sitemap
+public/sitemap*.xml
+public/robots.txt
+
 # Testing
 coverage/
