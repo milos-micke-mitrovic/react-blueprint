@@ -92,6 +92,22 @@ const config: DocsThemeConfig = {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="description" content={description} />
 
+        {/* Canonical URL */}
+        <link rel="canonical" href={url} />
+
+        {/* Google Analytics (GA4) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-BK6X7GV8TE" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-BK6X7GV8TE');
+            `,
+          }}
+        />
+
         {/* Structured data for Google site name */}
         <script
           type="application/ld+json"
