@@ -1,0 +1,53 @@
+# ReactBlueprint
+
+> The complete React + TypeScript best practices guide for 2026. Production-ready patterns, conventions, and copy-paste code for scalable applications.
+
+ReactBlueprint is a free, open-source documentation site covering everything developers need to build production-ready React applications. It includes project structure, naming conventions, component patterns, state management, data fetching, testing, security, SEO, and more.
+
+## Key Topics
+
+- React project structure and folder organization
+- TypeScript configuration and patterns for React
+- Component types, composition, and best practices
+- State management with Zustand (client state) and TanStack Query (server state)
+- React Hook Form with Zod validation
+- API services and data fetching patterns
+- Testing with Vitest and React Testing Library
+- Error handling and Error Boundaries
+- Performance optimization (React.memo, code splitting, lazy loading)
+- Tailwind CSS styling and theming
+- ESLint and Prettier configuration
+- Git workflow, branch naming, and conventional commits
+- Authentication (JWT, OAuth, protected routes)
+- CI/CD with GitHub Actions
+- SEO for React apps (meta tags, Open Graph, Core Web Vitals)
+- Internationalization (i18n)
+- Monitoring and error tracking
+- Accessibility (WCAG 2.1 AA)
+- Mobile deployment with Capacitor
+- Copy-paste templates for hooks, utilities, and components
+
+## Documentation Sections
+
+- [Getting Started](https://react-blueprint.dev/docs/getting-started/tech-stack): Tech stack overview and project structure
+- [Naming Conventions](https://react-blueprint.dev/docs/naming/files-folders): File, folder, and code naming patterns
+- [Components](https://react-blueprint.dev/docs/components/component-types): Component types, rules, and templates
+- [Forms](https://react-blueprint.dev/docs/forms/react-hook-form): React Hook Form, Zod validation, file uploads
+- [State Management](https://react-blueprint.dev/docs/state/decision-tree): When to use Zustand vs TanStack Query
+- [Data Fetching](https://react-blueprint.dev/docs/data-fetching/api-services): API clients and query hooks
+- [Authentication](https://react-blueprint.dev/docs/auth/patterns): Auth patterns, JWT, OAuth, protected routes
+- [Styling](https://react-blueprint.dev/docs/styling/tailwind): Tailwind CSS and theming
+- [TypeScript](https://react-blueprint.dev/docs/typescript/config): tsconfig and TypeScript patterns
+- [Testing](https://react-blueprint.dev/docs/testing/patterns): Testing patterns and coverage
+- [Error Handling](https://react-blueprint.dev/docs/errors/error-boundary): Error Boundaries and API errors
+- [Performance](https://react-blueprint.dev/docs/performance/optimization): Optimization and code splitting
+- [Linting](https://react-blueprint.dev/docs/linting/eslint): ESLint and Prettier setup
+- [Git Workflow](https://react-blueprint.dev/docs/git/branches): Branches and commits
+- [CI/CD](https://react-blueprint.dev/docs/cicd/github-actions): GitHub Actions and deployment
+- [Environment Variables](https://react-blueprint.dev/docs/env/basics): Env management and validation
+- [Internationalization](https://react-blueprint.dev/docs/i18n/setup): i18n setup and patterns
+- [Monitoring](https://react-blueprint.dev/docs/monitoring/error-tracking): Error tracking, analytics, logging
+- [Security](https://react-blueprint.dev/docs/security/best-practices): XSS, CSRF, and security patterns
+- [Accessibility](https://react-blueprint.dev/docs/accessibility/requirements): WCAG 2.1 AA guidelines
+- [SEO](https://react-blueprint.dev/docs/seo/meta-tags): Meta tags, Open Graph, Core Web Vitals
+- [Templates](https://react-blueprint.dev/docs/templates): Ready-to-use hooks, utilities, and components

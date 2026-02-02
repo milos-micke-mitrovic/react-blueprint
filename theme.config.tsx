@@ -122,6 +122,53 @@ const config: DocsThemeConfig = {
           }}
         />
 
+        {/* FAQ structured data for homepage — helps Google & AI search */}
+        {asPath === '/' && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: [
+                  {
+                    '@type': 'Question',
+                    name: 'What is the best React project structure in 2026?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'A feature-based folder structure with TypeScript, separating components, hooks, services, and utils. Use Vite for builds, Tailwind for styling, Zustand for client state, and TanStack Query for server state.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What state management should I use with React in 2026?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Use Zustand for lightweight client-side global state and TanStack Query (React Query) for server state, caching, and data fetching. This combination replaces Redux for most applications.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How should I handle forms in React?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Use React Hook Form for form state management and Zod for schema-based validation. This provides type-safe, performant forms with minimal re-renders.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What is the recommended React tech stack for 2026?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'React 18 with TypeScript, Vite for builds, Tailwind CSS for styling, Zustand for state management, TanStack Query for data fetching, React Hook Form with Zod for forms, Vitest and React Testing Library for testing, and ESLint with Prettier for code quality.',
+                    },
+                  },
+                ],
+              }),
+            }}
+          />
+        )}
+
         {/* Open Graph */}
         <meta property="og:url" content={url} />
         <meta property="og:type" content="website" />
